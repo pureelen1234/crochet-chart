@@ -1,0 +1,16 @@
+{
+  "name": "코바늘 도안 만들기",
+  "short_name": "코바늘 도안",
+  "description": "뜨개 지시문을 입력하면 코바늘 기호 도안이 그려지고 PDF로 저장할 수 있습니다.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EEEDF3",
+  "theme_color": "#C99420",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

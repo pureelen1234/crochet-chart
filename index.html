@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <title>코바늘 도안 만들기</title>
+  <meta name="description" content="뜨개 지시문을 입력하면 코바늘 기호 도안이 그려지고, PDF로 저장할 수 있습니다.">
+  <meta name="theme-color" content="#EEEDF3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141B28" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="코바늘 도안">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Fraunces:opsz,wght@9..144,600&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1 class="brand">코바늘 도안</h1>
+  <select id="project-select" aria-label="작품 선택"></select>
+  <button class="iconbtn" id="btn-new" type="button" title="새 작품" aria-label="새 작품">＋</button>
+  <button class="iconbtn" id="btn-help" type="button" title="도움말" aria-label="도움말">?</button>
+</header>
+
+<main class="main">
+    <section class="card a-input">
+      <h2>도안 입력 <button class="link" id="btn-example" type="button">예시 넣기</button></h2>
+      <div class="editor">
+        <pre class="gutter" id="gutter" aria-hidden="true"></pre>
+        <textarea id="pattern" spellcheck="false" autocapitalize="off" autocorrect="off"
+          placeholder="사슬 원형 시작 6&#10;짧은뜨기 6&#10;짧은뜨기 2코 늘려뜨기 6&#10;(짧은뜨기, 늘려뜨기)*6"></textarea>
+      </div>
+      <div class="rows" id="rows"></div>
+    </section>
+
+    <section class="card a-format">
+      <h2>도안 규격</h2>
+      <div class="seg" id="format-seg" role="group" aria-label="도안 규격"></div>
+    </section>
+
+    <section class="card a-info">
+      <h2>작품 정보</h2>
+      <div class="form">
+        <div class="field"><label for="f-name">작품 이름</label><input type="text" id="f-name" placeholder="예: 원형 코스터"></div>
+        <div class="two">
+          <div class="field"><label for="f-hook">바늘</label><input type="text" id="f-hook" placeholder="예: 모사용 5호 (3.0mm)"></div>
+          <div class="field"><label for="f-yarn">실</label><input type="text" id="f-yarn" placeholder="예: 면사 중세사"></div>
+        </div>
+        <div class="field"><label for="f-notes">메모</label><textarea id="f-notes" placeholder="게이지, 색 바꾸는 위치 등"></textarea></div>
+        <div class="editpanel"><div class="row"><button type="button" id="btn-delete" class="danger">이 작품 삭제</button></div></div>
+      </div>
+    </section>
+
+    <section class="card chartcard a-chart">
+      <div class="chartwrap" id="chartwrap">
+        <svg id="chart" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="코바늘 도안">
+          <g id="world"></g>
+        </svg>
+        <div class="empty" id="empty" hidden>
+          <div><b>NO PATTERN YET</b>왼쪽(위)에 도안을 입력하면 여기에 그려져요</div>
+        </div>
+        <div class="chart-tools">
+          <button type="button" id="btn-fit">맞춤</button>
+          <button type="button" id="btn-edit" aria-pressed="false">편집</button>
+        </div>
+        <div class="chart-hint" id="hint">한 손가락으로 이동 · 두 손가락으로 확대</div>
+      </div>
+    </section>
+
+    <section class="card a-edit" id="editcard" hidden>
+      <h2>기호 편집</h2>
+      <div class="editpanel">
+        <div class="sel" id="sel-text">도안에서 기호를 눌러 선택하세요</div>
+        <div class="slider">
+          <span>회전</span>
+          <input type="range" id="e-rot" min="-180" max="180" step="1" value="0" disabled>
+          <output id="e-rot-out">0°</output>
+        </div>
+        <div class="nudge">
+          <button type="button" data-nudge="0,-1" disabled>↑</button>
+          <button type="button" data-nudge="0,1" disabled>↓</button>
+          <button type="button" data-nudge="-1,0" disabled>←</button>
+          <button type="button" data-nudge="1,0" disabled>→</button>
+        </div>
+        <div class="row">
+          <button type="button" id="e-reset" disabled>이 기호 원위치</button>
+          <button type="button" id="e-undo" disabled>되돌리기</button>
+          <button type="button" id="e-reset-all" class="danger">전체 원위치</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="actions a-actions">
+      <button type="button" class="primary" id="btn-pdf">PDF로 저장</button>
+      <button type="button" id="btn-png">이미지(PNG) 저장</button>
+    </div>
+    <p class="note a-note">
+      입력한 도안은 이 기기에 자동 저장됩니다. Safari 공유 → <b>홈 화면에 추가</b>하면 앱처럼 쓸 수 있어요.<br>
+      <button type="button" id="btn-export">전체 백업 내보내기</button> · <button type="button" id="btn-import">백업 불러오기</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+    </p>
+</main>
+
+<dialog id="help">
+  <div class="sheet">
+    <header><h3>도안 입력 방법</h3><button class="iconbtn" type="button" id="help-close" aria-label="닫기">✕</button></header>
+    <p>한 줄이 한 단입니다. 첫 줄에 시작 방법을 적고, 그다음 줄부터 1단, 2단… 순서로 적으세요.</p>
+    <h4>시작 (첫 줄)</h4>
+    <pre>매직링              → 원형(매직링) 시작
+사슬 원형 시작 6     → 사슬 6코를 원으로 이어서 시작
+기초 사슬 20        → 평면: 사슬 20코로 시작</pre>
+    <h4>단 (둘째 줄부터)</h4>
+    <pre>짧은뜨기 6                    → 짧은뜨기 6개
+짧은뜨기 2코 늘려뜨기 6         → 한 코에 짧은뜨기 2개(늘림) ×6
+짧은뜨기 2코 모아뜨기 3         → 두 코를 하나로(줄임) ×3
+(짧은뜨기, 늘려뜨기)*6          → 괄호 안을 6번 반복
+한길긴뜨기 12, 사슬 2, 빼뜨기   → 쉼표로 이어서 적기
+3단: 짧은뜨기 18               → "3단:" 같은 머리말은 무시됩니다</pre>
+    <p>단마다 코 수가 자동 계산되고, 전 단과 맞지 않으면 노란색으로 표시됩니다. 숫자만 쓰면 짧은뜨기로 봅니다.</p>
+    <h4>기호</h4>
+    <div class="legend" id="legend"></div>
+    <p>기호는 <code>symbols.js</code>에 줄을 추가하면 늘어납니다.</p>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="symbols.js"></script>
+<script src="parser.js"></script>
+<script src="layout.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
