@@ -9,12 +9,18 @@
    consumes  : 전 단에서 사용하는 코 수 (사슬·피코처럼 전 단과 무관하면 0)
    produces  : 이 기호가 만드는 코 수
    h         : 기호 세로 반높이 (늘림/줄임 부채꼴 회전 중심 계산용)
-   draw()    : SVG 조각. 좌표 원점(0,0)이 기호 중심, 위쪽이 -y.
+   draw(ext) : SVG 조각. 좌표 원점(0,0)이 기호 중심, 위쪽이 -y.
+               ext = 기둥을 아래로 더 늘일 길이 (부채꼴로 벌어질 때 배치에서 넘겨줌, 무시해도 됨)
                선은 stroke="currentColor"로 그려지므로 fill/stroke는
                특별한 경우가 아니면 지정하지 않습니다.
    ===================================================================== */
 
 const STITCHES = [
+  {
+    id: "standing", name: "기둥사슬", aliases: ["기둥사슬", "기둥코", "기둥", "돌림사슬", "시작사슬"],
+    consumes: 0, produces: 0, h: 4, pseudo: true,   // 단 시작 사슬. 개수는 layout에서 세로로 쌓아 그림
+    draw: () => `<ellipse rx="3.2" ry="6"/>`
+  },
   {
     id: "ch", name: "사슬뜨기", aliases: ["사슬", "사슬뜨기", "ch", "체인"],
     consumes: 0, produces: 1, h: 4,
@@ -33,22 +39,22 @@ const STITCHES = [
   {
     id: "hdc", name: "긴뜨기", aliases: ["긴뜨기", "긴", "hdc"],
     consumes: 1, produces: 1, h: 9,
-    draw: () => `<path d="M0 9 L0 -9 M-6 -9 L6 -9"/>`
+    draw: (ext = 0) => `<path d="M0 ${9 + ext} L0 -9 M-6 -9 L6 -9"/>`
   },
   {
     id: "dc", name: "한길긴뜨기", aliases: ["한길긴뜨기", "한길", "한길긴", "dc"],
     consumes: 1, produces: 1, h: 10,
-    draw: () => `<path d="M0 10 L0 -10 M-6 -10 L6 -10 M-4 -1 L4 -5"/>`
+    draw: (ext = 0) => `<path d="M0 ${10 + ext} L0 -10 M-6 -10 L6 -10 M-4 -1 L4 -5"/>`
   },
   {
     id: "tr", name: "두길긴뜨기", aliases: ["두길긴뜨기", "두길", "두길긴", "tr"],
     consumes: 1, produces: 1, h: 12,
-    draw: () => `<path d="M0 12 L0 -12 M-6 -12 L6 -12 M-4 -2 L4 -6 M-4 3 L4 -1"/>`
+    draw: (ext = 0) => `<path d="M0 ${12 + ext} L0 -12 M-6 -12 L6 -12 M-4 -2 L4 -6 M-4 3 L4 -1"/>`
   },
   {
     id: "dtr", name: "세길긴뜨기", aliases: ["세길긴뜨기", "세길", "세길긴", "dtr"],
     consumes: 1, produces: 1, h: 14,
-    draw: () => `<path d="M0 14 L0 -14 M-6 -14 L6 -14 M-4 -4 L4 -8 M-4 1 L4 -3 M-4 6 L4 2"/>`
+    draw: (ext = 0) => `<path d="M0 ${14 + ext} L0 -14 M-6 -14 L6 -14 M-4 -4 L4 -8 M-4 1 L4 -3 M-4 6 L4 2"/>`
   },
   {
     id: "blo", name: "이랑뜨기(뒤반코)", aliases: ["이랑뜨기", "이랑", "뒤반코", "blo"],
@@ -68,12 +74,12 @@ const STITCHES = [
   {
     id: "fpdc", name: "앞걸어 한길긴뜨기", aliases: ["앞걸어뜨기", "앞걸어", "앞걸어한길긴뜨기", "fpdc"],
     consumes: 1, produces: 1, h: 10,
-    draw: () => `<path d="M0 6 L0 -10 M-6 -10 L6 -10 M-4 -1 L4 -5 M-4 6 Q0 12 4 6"/>`
+    draw: (ext = 0) => `<path d="M0 ${6 + ext} L0 -10 M-6 -10 L6 -10 M-4 -1 L4 -5 M-4 ${6 + ext} Q0 ${12 + ext} 4 ${6 + ext}"/>`
   },
   {
     id: "bpdc", name: "뒤걸어 한길긴뜨기", aliases: ["뒤걸어뜨기", "뒤걸어", "뒤걸어한길긴뜨기", "bpdc"],
     consumes: 1, produces: 1, h: 10,
-    draw: () => `<path d="M0 6 L0 -10 M-6 -10 L6 -10 M-4 -1 L4 -5 M-4 10 Q0 4 4 10"/>`
+    draw: (ext = 0) => `<path d="M0 ${6 + ext} L0 -10 M-6 -10 L6 -10 M-4 -1 L4 -5 M-4 ${10 + ext} Q0 ${4 + ext} 4 ${10 + ext}"/>`
   }
 ];
 
@@ -83,7 +89,7 @@ const MODIFIERS = [
   { kind: "dec", aliases: ["모아뜨기", "줄임뜨기", "줄임", "줄이기", "모아", "dec", "감소"], defaultN: 2 }
 ];
 
-/* 시작 방법 (첫 줄) */
+/* 시작 방법 (첫 줄) — 매직링은 원 하나(○), 사슬 원형은 사슬 N개를 원으로 */
 const STARTS = [
   { kind: "magic", aliases: ["매직링", "매직", "원형시작", "원형", "magicring", "mr"] },
   { kind: "chainring", aliases: ["사슬원형시작", "사슬원형", "사슬링", "원형사슬", "사슬로원형"] },
@@ -113,11 +119,49 @@ function drawFan(def, kind, k) {
   return out;
 }
 
-/* 하나의 코 요소(element)를 SVG 문자열로 */
-function drawElement(el) {
-  const def = STITCH_BY_ID[el.stitch] || STITCH_BY_ID.sc;
-  if (el.mod === "inc" || el.mod === "dec") return drawFan(def, el.mod, el.n);
-  return def.draw();
+/* ---- 묶음 기호 (layout이 만든 요소 종류별) ---- */
+const CH_LEN = 12.5;   // 사슬 동그라미 하나의 길이(이어 붙일 때 간격)
+
+/* 사슬 N개를 끝과 끝이 붙게 한 줄로. corner=true면 모서리처럼 가운데가 바깥쪽으로 꺾임 */
+function drawChain(n, corner) {
+  let out = "";
+  for (let k = 0; k < n; k++) {
+    const x = (k - (n - 1) / 2) * CH_LEN;
+    if (corner && n >= 2) {
+      const side = k < n / 2 ? -1 : 1;           // 왼쪽 절반 / 오른쪽 절반
+      const bend = 32 * side;                    // 바깥쪽(-y)으로 모이는 ^ 모양
+      out += `<g transform="translate(${x.toFixed(1)} 1.5) rotate(${bend})"><ellipse rx="6" ry="3.2"/></g>`;
+    } else {
+      out += `<ellipse cx="${x.toFixed(1)}" rx="6" ry="3.2"/>`;
+    }
+  }
+  return out;
 }
 
-window.CROCHET_SYMBOLS = { STITCHES, MODIFIERS, STARTS, STITCH_BY_ID, ALIAS_INDEX, drawElement };
+/* 기둥사슬: 동그라미 N개를 세로(바깥쪽 방향)로 쌓음 */
+function drawStanding(n) {
+  let out = "";
+  for (let k = 0; k < n; k++) {
+    const y = ((n - 1) / 2 - k) * 7;            // 아래(안쪽)부터 위(바깥쪽)로
+    out += `<ellipse cy="${y.toFixed(1)}" rx="3.2" ry="4"/>`;
+  }
+  return out;
+}
+
+/* 단 끝 빼뜨기(이음): 점 하나 */
+function drawJoin() { return `<circle r="2.4" fill="currentColor" stroke="none"/>`; }
+
+/* 매직링: 원 하나 */
+function drawMagicRing() { return `<circle r="7"/>`; }
+
+/* 하나의 코 요소(element)를 SVG 문자열로 */
+function drawElement(el) {
+  if (el.kind === "chain") return drawChain(el.n, !!el.corner);
+  if (el.kind === "standing") return drawStanding(el.n);
+  if (el.kind === "join") return drawJoin();
+  const def = STITCH_BY_ID[el.stitch] || STITCH_BY_ID.sc;
+  if (el.mod === "inc" || el.mod === "dec") return drawFan(def, el.mod, el.n);
+  return def.draw(el.ext || 0);
+}
+
+window.CROCHET_SYMBOLS = { STITCHES, MODIFIERS, STARTS, STITCH_BY_ID, ALIAS_INDEX, drawElement, drawChain, drawStanding, drawJoin, drawMagicRing, CH_LEN };

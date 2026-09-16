@@ -18,21 +18,39 @@
     id: uid(), name, format: format || "round", hook: "", yarn: "", notes: "", text: text || "", overrides: {}, updated: Date.now()
   });
   const EXAMPLES = {
-    round: "사슬 원형 시작 10\n짧은뜨기 10\n짧은뜨기 2코 늘려뜨기 10\n(짧은뜨기, 짧은뜨기 2코 늘려뜨기)*10",
-    flat: "기초 사슬 10\n사슬 1, 짧은뜨기 10\n사슬 1, 짧은뜨기 10\n사슬 2, 한길긴뜨기 10\n사슬 1, (짧은뜨기 3, 짧은뜨기 2코 모아뜨기)*2"
+    round: "매직링\n기둥사슬 1, 짧은뜨기 6, 빼뜨기\n기둥사슬 1, 짧은뜨기 2코 늘려뜨기 6, 빼뜨기\n기둥사슬 1, (짧은뜨기, 짧은뜨기 2코 늘려뜨기)*6, 빼뜨기\n기둥사슬 1, (짧은뜨기 2, 짧은뜨기 2코 늘려뜨기)*6, 빼뜨기",
+    flat: "기초 사슬 10\n기둥사슬 1, 짧은뜨기 10\n기둥사슬 1, 짧은뜨기 10\n기둥사슬 3, 한길긴뜨기 9\n기둥사슬 1, (짧은뜨기 3, 짧은뜨기 2코 모아뜨기)*2",
+    square: [
+      "매직링",
+      "기둥사슬 3, 한길긴뜨기 2, 사슬 2, (한길긴뜨기 3, 사슬 2)*3, 빼뜨기",
+      "사슬2 공간에 (기둥사슬 3, 한길긴뜨기 2, 사슬 2, 한길긴뜨기 3), 사슬 1, [사슬2 공간에 (한길긴뜨기 3, 사슬 2, 한길긴뜨기 3), 사슬 1]*3, 빼뜨기",
+      "사슬2 공간에 (기둥사슬 3, 한길긴뜨기 2, 사슬 2, 한길긴뜨기 3), 사슬 1, 사슬1 공간에 한길긴뜨기 3, 사슬 1, [사슬2 공간에 (한길긴뜨기 3, 사슬 2, 한길긴뜨기 3), 사슬 1, 사슬1 공간에 한길긴뜨기 3, 사슬 1]*3, 빼뜨기",
+      "사슬2 공간에 (기둥사슬 3, 한길긴뜨기 2, 사슬 2, 한길긴뜨기 3), 사슬 1, (사슬1 공간에 한길긴뜨기 3, 사슬 1)*2, [사슬2 공간에 (한길긴뜨기 3, 사슬 2, 한길긴뜨기 3), 사슬 1, (사슬1 공간에 한길긴뜨기 3, 사슬 1)*2]*3, 빼뜨기"
+    ].join("\n")
   };
-  function seed() {
+  const SEED_VERSION = 2;
+  function seedProjects() {
     const a = newProject("예시 · 원형 코스터", "round", EXAMPLES.round);
     a.hook = "모사용 5호 (3.0mm)"; a.yarn = "면사 중세사";
-    const b = newProject("예시 · 평면 수세미", "flat", EXAMPLES.flat);
-    return { projects: [a, b], current: a.id };
+    const b = newProject("예시 · 왕복 수세미", "flat", EXAMPLES.flat);
+    const c = newProject("예시 · 그래니 스퀘어", "square", EXAMPLES.square);
+    c.hook = "모사용 6호 (3.5mm)"; c.notes = "모서리 = 사슬 2, 변 사이 = 사슬 1";
+    return [a, b, c];
   }
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (s && Array.isArray(s.projects) && s.projects.length) return s;
+      if (s && Array.isArray(s.projects) && s.projects.length) {
+        // 예시가 새로 추가되면 기존 사용자에게도 넣어 줌 (같은 이름이 없을 때만)
+        if ((s.seedVersion || 1) < SEED_VERSION) {
+          seedProjects().forEach(p => { if (!s.projects.some(x => x.name === p.name)) s.projects.push(p); });
+          s.seedVersion = SEED_VERSION;
+        }
+        return s;
+      }
     } catch (e) {}
-    return seed();
+    const projects = seedProjects();
+    return { projects, current: projects[2].id, seedVersion: SEED_VERSION };
   }
   let state = load();
   if (!state.projects.find(p => p.id === state.current)) state.current = state.projects[0].id;
@@ -65,6 +83,7 @@
     let s = "";
     lay.guides.forEach(g => {
       if (g.type === "circle") s += `<circle class="guide" r="${g.r.toFixed(2)}" fill="none" stroke="${GUIDE}" stroke-width="0.8"/>`;
+      else if (g.type === "square") s += `<rect class="guide" x="${(-g.r).toFixed(2)}" y="${(-g.r).toFixed(2)}" width="${(2 * g.r).toFixed(2)}" height="${(2 * g.r).toFixed(2)}" rx="3" fill="none" stroke="${GUIDE}" stroke-width="0.8"/>`;
       else s += `<line class="guide" x1="${g.x1.toFixed(1)}" x2="${g.x2.toFixed(1)}" y1="${g.y.toFixed(1)}" y2="${g.y.toFixed(1)}" stroke="${GUIDE}" stroke-width="0.8"/>`;
     });
     s += `<g class="start">${lay.startShape}</g>`;
@@ -77,7 +96,7 @@
       s += `</g>`;
     });
     lay.labels.forEach(l => {
-      s += `<text class="label" x="${l.x.toFixed(1)}" y="${l.y.toFixed(1)}" text-anchor="${l.anchor}" fill="${LABEL_INK}" stroke="none" font-family="Helvetica Neue, Arial, sans-serif" font-weight="600" font-size="7.5">${esc(l.text)}</text>`;
+      s += `<text class="label" x="${l.x.toFixed(1)}" y="${l.y.toFixed(1)}" text-anchor="${l.anchor}" fill="${LABEL_INK}" stroke="${PAPER}" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round" font-family="Helvetica Neue, Arial, sans-serif" font-weight="600" font-size="7">${esc(l.text)}</text>`;
     });
     return s;
   }
@@ -337,9 +356,18 @@
   function describe(key) {
     const n = lay && lay.nodes.find(x => x.key === key);
     if (!n) return "";
-    const def = SYM.STITCH_BY_ID[n.el.stitch];
-    const modName = n.el.mod === "inc" ? ` ${n.el.n}코 늘림` : n.el.mod === "dec" ? ` ${n.el.n}코 모아뜨기` : "";
-    return `<b>${n.row}단 ${n.i + 1}번째</b> · ${def ? def.name : n.el.stitch}${modName}`;
+    const e = n.el;
+    let name;
+    if (e.kind === "chain") name = `사슬 ${e.n}${e.corner ? " (모서리)" : ""}`;
+    else if (e.kind === "standing") name = `기둥사슬 ${e.n}`;
+    else if (e.kind === "join") name = "빼뜨기 (이음)";
+    else {
+      const def = SYM.STITCH_BY_ID[e.stitch];
+      const modName = e.mod === "inc" ? ` ${e.n}코 늘림` : e.mod === "dec" ? ` ${e.n}코 모아뜨기` : "";
+      name = `${def ? def.name : e.stitch}${modName}`;
+    }
+    if (e.sg != null) name += " · 공간에";
+    return `<b>${n.row}단 ${n.i + 1}번째</b> · ${name}`;
   }
   function renderEditPanel() {
     const has = !!selectedKey && lay && lay.nodes.some(n => n.key === selectedKey);
@@ -549,12 +577,20 @@
   /* ---------------- 도움말 ---------------- */
   function renderLegend() {
     const box = $("legend"); box.innerHTML = "";
-    const items = SYM.STITCHES.map(s => ({ label: s.name, sub: s.aliases.slice(0, 3).join(", "), el: { stitch: s.id, mod: null, n: 1 }, h: s.h }));
-    items.push({ label: "늘려뜨기 (2코)", sub: "N코 늘려뜨기", el: { stitch: "sc", mod: "inc", n: 2 }, h: 8 });
-    items.push({ label: "모아뜨기 (2코)", sub: "N코 모아뜨기", el: { stitch: "sc", mod: "dec", n: 2 }, h: 8 });
+    const items = [
+      { label: "매직링", sub: "첫 줄에 '매직링'", svg: SYM.drawMagicRing() },
+      { label: "기둥사슬 (3)", sub: "기둥사슬 N · 단 첫머리 사슬", el: { kind: "standing", n: 3 } },
+      { label: "사슬 묶음 (3)", sub: "사슬 N · 이어진 사슬", el: { kind: "chain", n: 3 } },
+      { label: "모서리 사슬 (2)", sub: "사각 모서리에서 자동", el: { kind: "chain", n: 2, corner: true } },
+      { label: "이음 빼뜨기", sub: "단 끝의 '빼뜨기'", el: { kind: "join" } }
+    ];
+    SYM.STITCHES.filter(s => !s.pseudo).forEach(s => items.push({ label: s.name, sub: s.aliases.slice(0, 3).join(", "), el: { kind: "st", stitch: s.id, mod: null, n: 1 } }));
+    items.push({ label: "늘려뜨기 (2코)", sub: "N코 늘려뜨기", el: { kind: "st", stitch: "sc", mod: "inc", n: 2 } });
+    items.push({ label: "모아뜨기 (2코)", sub: "N코 모아뜨기", el: { kind: "st", stitch: "sc", mod: "dec", n: 2 } });
     items.forEach(it => {
       const d = document.createElement("div"); d.className = "item";
-      d.innerHTML = `<svg viewBox="-17 -17 34 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${SYM.drawElement(it.el)}</svg><span>${it.label}<small>${it.sub}</small></span>`;
+      const inner = it.svg || SYM.drawElement(it.el);
+      d.innerHTML = `<svg viewBox="-20 -17 40 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${inner}</svg><span>${it.label}<small>${it.sub}</small></span>`;
       box.appendChild(d);
     });
   }

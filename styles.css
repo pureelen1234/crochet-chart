@@ -175,7 +175,7 @@ button { cursor: pointer; }
 .chartwrap .node.moved .hit { stroke: rgba(201, 148, 32, 0.55); stroke-width: 1; stroke-dasharray: 2 2; }
 .chartwrap.editing .node { cursor: grab; }
 .chartwrap .guide { stroke: var(--paper-line); fill: none; stroke-width: 0.8; }
-.chartwrap .label { fill: #4A473F; font: 600 7.5px "Helvetica Neue", Arial, sans-serif; }
+.chartwrap .label { fill: #4A473F; font: 600 7px "Helvetica Neue", Arial, sans-serif; }
 .chartwrap .empty {
   position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #8A857A; padding: 24px;
 }
