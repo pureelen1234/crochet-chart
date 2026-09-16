@@ -1,14 +1,33 @@
 # 코바늘 도안 만들기
 
-> **다른 컴퓨터에서 이어서 작업하기 (맥/윈도우 공통)**
-> 1. 터미널에서 GitHub 로그인 (브라우저가 열림, 한 번만): `gh auth login --web --git-protocol https`
->    - 맥에 `gh`가 없으면 먼저 `brew install gh`
-> 2. 저장소 받기: `gh repo clone pureelen1234/crochet-chart`
-> 3. Claude 데스크톱 앱 → Code 탭 → 받은 `crochet-chart` 폴더를 작업 폴더로 열기
+> **맥에서 이어서 작업하기 — 처음 한 번만 하는 세팅**
+>
+> "터미널"은 명령을 글자로 입력하는 앱입니다. ⌘+스페이스 → `터미널` 입력 → Enter로 엽니다. 아래 명령을 한 줄씩 복사해서 붙여넣고 Enter.
+>
+> 1. **도구 설치** (몇 분 걸림. 맥 비밀번호를 물으면 입력, "Press RETURN"이 나오면 Enter, "명령어 라인 도구 설치" 창이 뜨면 설치)
+>    ```
+>    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && brew install gh
+>    ```
+> 2. **GitHub 로그인**
+>    ```
+>    gh auth login --web --git-protocol https
+>    ```
+>    - 질문이 나오면 전부 Enter
+>    - `First copy your one-time code: A1B2-C3D4` 처럼 8자리 코드가 보임 → 복사(⌘+C) → Enter
+>    - 브라우저가 열리면 GitHub 로그인(pureelen1234) → 코드 붙여넣기 → Continue → Authorize
+>    - 터미널에 `✓ Logged in as pureelen1234` 가 뜨면 성공
+> 3. **폴더 받기** (바탕화면에 `crochet-chart` 폴더가 생김)
+>    ```
+>    cd ~/Desktop && gh repo clone pureelen1234/crochet-chart
+>    ```
+> 4. **Claude 데스크톱 앱** → Code 탭 → 바탕화면의 `crochet-chart` 폴더를 작업 폴더로 열기. 끝.
 >    - 폴더 안 `CLAUDE.md`를 자동으로 읽어서 지금까지의 결정·피드백을 알고 시작합니다
 >    - 첫 메시지는 "아내 피드백이야: …" 처럼 바로 본론으로
-> 4. 작업이 끝나면 "배포해줘"라고 하면 push → 1~2분 뒤 https://pureelen1234.github.io/crochet-chart/ 에 반영
-> 5. 다른 컴퓨터로 돌아오면 시작할 때 "최신 코드 받아줘"(`git pull`)
+>    - 이후 터미널은 다시 열 일 없음. 배포("배포해줘")·최신 코드 받기("최신 코드 받아줘")는 Claude에게 말로 시키면 됨
+>
+> 막히면: 터미널의 빨간 글씨를 복사해서 맥의 Claude 앱 채팅에 붙여넣고 "이거 뭐야"라고 물어보세요.
+>
+> **윈도우 ↔ 맥 번갈아 작업할 때**: 시작할 때 "최신 코드 받아줘", 끝날 때 "배포해줘".
 
 뜨개 지시문을 한 줄씩 입력하면 코바늘 기호 도안이 자동으로 그려지고, 기호를 손으로 옮기거나 돌려서 다듬은 뒤 PDF/PNG로 저장하는 웹앱입니다. 아이폰 Safari에서 "홈 화면에 추가"하면 앱처럼 쓸 수 있습니다.
 
