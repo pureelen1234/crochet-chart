@@ -11,7 +11,8 @@
 - GitHub Pages: https://pureelen1234.github.io/crochet-chart/ (저장소 pureelen1234/crochet-chart, 공개)
 - `git push origin main` 하면 1~2분 뒤 반영. 빌드 없음(정적 파일).
 - 파일 바꿀 때 `sw.js`의 `CACHE` 버전을 올려야 아이폰의 오프라인 캐시가 교체됨 (현재 v3).
-- 로컬 미리보기: `powershell -ExecutionPolicy Bypass -File serve.ps1` → http://localhost:8765 (node/python 없는 환경 대비)
+- 로컬 미리보기: 윈도우 `powershell -ExecutionPolicy Bypass -File serve.ps1`, 맥 `python3 -m http.server 8765` → http://localhost:8765
+- 여러 컴퓨터에서 작업: 시작할 때 `git pull`, 끝날 때 `git push`. push까지 해야 배포됨.
 - 커밋 시 git 사용자: `git -c user.name="pure_" -c user.email="pureelen2@gmail.com" commit …` (전역 설정 없음)
 
 ## 결정된 사양 (아내 확인 완료)
