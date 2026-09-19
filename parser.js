@@ -153,8 +153,14 @@
     }
     const mm = matchWord(tokens, look);
     if (mm && mm.hit.type === "mod") {
-      mod = mm.hit.def.kind; n = nk || mm.hit.def.defaultN; pos = look + mm.len;
-      if (!stitch) stitch = "sc";
+      const md = mm.hit.def;
+      mod = md.kind; n = nk || md.defaultN || 1; pos = look + mm.len;
+      if (!stitch) {
+        // "앞걸어뜨기 한길긴뜨기"처럼 수식어 뒤에 기본 기호가 올 수도 있음
+        const ns = md.variant ? matchWord(tokens, pos) : null;
+        if (ns && ns.hit.type === "stitch") { stitch = ns.hit.def.id; pos += ns.len; }
+        else stitch = md.defaultStitch || "sc";
+      }
     } else if (nk !== null) {
       return { pos: look, items: repeat({ stitch, mod: null, n: 1 }, nk) };
     }

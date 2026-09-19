@@ -232,11 +232,12 @@
     const prev = t.slice(-1);
     const empty = !t, isDigit = /\d/.test(prev), isOpen = prev === "(", isClose = prev === ")", isMul = prev === "*";
     const isSpace = /공간에$/.test(t), isWord = /[가-힣a-zA-Z]$/.test(prev) && !isSpace;
+    const afterRepeat = /\*\d+$/.test(t);   // "(…)*3" 뒤: 숫자지만 코 수가 아니라 반복 횟수
     let add = "";
     switch (kind) {
       case "st": add = (empty || isOpen || isMul) ? text : isSpace ? " " + text : ", " + text; break;
       case "num": add = (isDigit || isMul) ? text : isClose ? "*" + text : isWord ? " " + text : (empty || isOpen) ? text : ", " + text; break;
-      case "mod": add = isDigit ? "코 " + text : isWord ? " " + text : (empty || isOpen) ? text : isSpace ? " " + text : ", " + text; break;
+      case "mod": add = (isDigit && !afterRepeat) ? "코 " + text : isWord ? " " + text : (empty || isOpen) ? text : isSpace ? " " + text : ", " + text; break;
       case "sp": add = empty ? "공간에" : " 공간에"; break;
       case "open": add = (empty || isOpen) ? "(" : isSpace ? " (" : ", ("; break;
       case "close": add = ")"; break;
@@ -302,8 +303,8 @@
   const stKey = (id, label) => { const d = SYM.STITCH_BY_ID[id]; return key(label || d.name, stSvg(id), () => kpInsert("st", label || d.aliases[0])); };
   const txtKey = (label, glyph, onTap, cls) => key(label, `<b>${glyph}</b>`, onTap, cls);
   function renderKeypad() {
-    const main = $("kp-main"), sub = $("kp-sub"), num = $("kp-num"), op = $("kp-op"), more = $("kp-more");
-    [main, sub, num, op, more].forEach(el => el.innerHTML = "");
+    const main = $("kp-main"), sub = $("kp-sub"), words = $("kp-words"), num = $("kp-num"), op = $("kp-op"), more = $("kp-more");
+    [main, sub, words, num, op, more].forEach(el => el.innerHTML = "");
     // 1열: 주로 쓰는 기호 (아내 확인: 사슬·짧은뜨기·긴뜨기·한길긴뜨기·두길긴뜨기·빼뜨기)
     main.append(
       key("사슬", KEY_SVG(SYM.drawChain(1)), () => kpInsert("st", "사슬")),
@@ -314,13 +315,17 @@
     sub.append(
       key("기둥사슬", KEY_SVG(SYM.drawStanding(3)), () => kpInsert("st", "기둥사슬")),
       // 늘려·모아뜨기는 낱말 버튼 (아내 결정): "짧은뜨기 2 늘려뜨기" → "짧은뜨기 2코 늘려뜨기"로 적히고 기호는 그때 정해짐
-      key("N코 뒤에", `<b class="word">늘려뜨기</b>`, () => kpInsert("mod", "늘려뜨기")),
-      key("N코 뒤에", `<b class="word">모아뜨기</b>`, () => kpInsert("mod", "모아뜨기")),
+      key("N코 늘려뜨기", `<b class="word">늘려</b>`, () => kpInsert("mod", "늘려뜨기")),
+      key("N코 모아뜨기", `<b class="word">모아</b>`, () => kpInsert("mod", "모아뜨기")),
       txtKey("공간에", "⌒", () => kpInsert("sp")),
       key("매직링", KEY_SVG(SYM.drawMagicRing()), () => kpInsert("st", "매직링")),
       txtKey("다른 기호", "…", () => { const on = more.hidden; more.hidden = !on; moreBtn.setAttribute("aria-pressed", on ? "true" : "false"); }, "more")
     );
     const moreBtn = sub.lastElementChild;
+    // 3열: 기본 기호 뒤에 붙이는 낱말 (아내 결정: 글자 버튼 6개). "짧은뜨기 앞이랑뜨기", "긴뜨기 3코 구슬뜨기"
+    // 버튼엔 짧게(앞이랑), 실제로는 온 낱말(앞이랑뜨기)이 적힘
+    [["앞이랑", "앞이랑뜨기"], ["뒷이랑", "뒷이랑뜨기"], ["앞걸어", "앞걸어뜨기"], ["뒤걸어", "뒤걸어뜨기"], ["구슬", "N코 구슬뜨기"], ["팝콘", "N코 팝콘뜨기"]]
+      .forEach(([short, full]) => words.append(key(full, `<b class="word">${short}</b>`, () => kpInsert("mod", full.replace("N코 ", "")))));
     // 3열: 숫자
     "1234567890".split("").forEach(d => num.append(txtKey("", d, () => kpInsert("num", d))));
     // 4열: 괄호·반복·줄·지우기
@@ -749,8 +754,14 @@
       { label: "이음 빼뜨기", sub: "단 끝의 '빼뜨기'", el: { kind: "join" } }
     ];
     SYM.STITCHES.filter(s => !s.pseudo).forEach(s => items.push({ label: s.name, sub: s.aliases.slice(0, 3).join(", "), el: { kind: "st", stitch: s.id, mod: null, n: 1 } }));
-    items.push({ label: "늘려뜨기 (2코)", sub: "N코 늘려뜨기", el: { kind: "st", stitch: "sc", mod: "inc", n: 2 } });
-    items.push({ label: "모아뜨기 (2코)", sub: "N코 모아뜨기", el: { kind: "st", stitch: "sc", mod: "dec", n: 2 } });
+    items.push({ label: "늘려뜨기 (2코)", sub: "짧은뜨기 2코 늘려뜨기", el: { kind: "st", stitch: "sc", mod: "inc", n: 2 } });
+    items.push({ label: "모아뜨기 (2코)", sub: "한길긴뜨기 2코 모아뜨기", el: { kind: "st", stitch: "dc", mod: "dec", n: 2 } });
+    items.push({ label: "앞이랑뜨기", sub: "짧은뜨기 앞이랑뜨기", el: { kind: "st", stitch: "sc", mod: "flo", n: 1 } });
+    items.push({ label: "뒷이랑뜨기", sub: "짧은뜨기 뒷이랑뜨기 (이랑뜨기)", el: { kind: "st", stitch: "sc", mod: "blo", n: 1 } });
+    items.push({ label: "앞걸어뜨기", sub: "한길긴뜨기 앞걸어뜨기", el: { kind: "st", stitch: "dc", mod: "fp", n: 1 } });
+    items.push({ label: "뒤걸어뜨기", sub: "한길긴뜨기 뒤걸어뜨기", el: { kind: "st", stitch: "dc", mod: "bp", n: 1 } });
+    items.push({ label: "구슬뜨기 (3코)", sub: "긴뜨기 3코 구슬뜨기", el: { kind: "st", stitch: "hdc", mod: "puff", n: 3 } });
+    items.push({ label: "팝콘뜨기 (5코)", sub: "한길긴뜨기 5코 팝콘뜨기", el: { kind: "st", stitch: "dc", mod: "popcorn", n: 5 } });
     items.forEach(it => {
       const d = document.createElement("div"); d.className = "item";
       const inner = it.svg || SYM.drawElement(it.el);

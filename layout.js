@@ -351,7 +351,8 @@
           // 같은 공간에 모여 뜨는 묶음(또는 매직링 1단): 머리는 단 선에 나란히, 기둥만 앵커로 모임
           rot = Math.atan2(P.y - A.y, P.x - A.x) / DEG + 90;
         }
-        if (e.kind === "st" && inFan && !e.mod) {
+        const stemLike = !e.mod || (SYM.MOD_BY_KIND[e.mod] && SYM.MOD_BY_KIND[e.mod].stem);   // 앞이랑·걸어뜨기는 기둥을 늘임
+        if (e.kind === "st" && inFan && stemLike) {
           const def = SYM.STITCH_BY_ID[e.stitch];
           if (def && def.h >= 9) ext = Math.max(0, Math.min(48, D - 2 * def.h - margin));
         }
@@ -413,7 +414,8 @@
         if (e.kind === "st" && e.sg != null && r.anchor[i] !== null) {
           rot = Math.atan2(-gap, x - ax) / DEG + 90;
           const def = SYM.STITCH_BY_ID[e.stitch];
-          if (def && def.h >= 9 && !e.mod) ext = Math.max(0, Math.min(48, D - 2 * def.h - 3));
+          const stemLike = !e.mod || (SYM.MOD_BY_KIND[e.mod] && SYM.MOD_BY_KIND[e.mod].stem);
+          if (def && def.h >= 9 && stemLike) ext = Math.max(0, Math.min(48, D - 2 * def.h - 3));
         }
         if (e.kind === "standing") len = Math.max(e.n * 4, gap - 3);
         const el = { ...e, ext, len };

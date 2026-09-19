@@ -57,37 +57,27 @@ const STITCHES = [
     draw: (ext = 0) => `<path d="M0 ${14 + ext} L0 -14 M-4 -14 L4 -14 M-3 -5 L3 -8 M-3 0 L3 -3 M-3 5 L3 2"/>`
   },
   {
-    id: "blo", name: "이랑뜨기(뒤반코)", aliases: ["이랑뜨기", "이랑", "뒤반코", "blo"],
-    consumes: 1, produces: 1, h: 6,
-    draw: () => `<path d="M-4 -6 L4 4 M-4 4 L4 -6 M-4 8 A4 2 0 0 0 4 8"/>`
-  },
-  {
-    id: "flo", name: "앞반코 짧은뜨기", aliases: ["앞반코", "앞이랑", "flo"],
-    consumes: 1, produces: 1, h: 6,
-    draw: () => `<path d="M-4 -4 L4 6 M-4 6 L4 -4 M-4 -8 A4 2 0 0 1 4 -8"/>`
-  },
-  {
     id: "picot", name: "피코", aliases: ["피코", "피코뜨기", "picot"],
     consumes: 0, produces: 0, h: 6,
     draw: () => `<path d="M0 6 L0 1 M-4 -2 A4 4 0 1 1 4 -2 L0 1 Z"/>`
-  },
-  {
-    id: "fpdc", name: "앞걸어 한길긴뜨기", aliases: ["앞걸어뜨기", "앞걸어", "앞걸어한길긴뜨기", "fpdc"],
-    consumes: 1, produces: 1, h: 10,
-    draw: (ext = 0) => `<path d="M0 ${6 + ext} L0 -10 M-4 -10 L4 -10 M-3 -2 L3 -5 M-3 ${6 + ext} Q0 ${11 + ext} 3 ${6 + ext}"/>`
-  },
-  {
-    id: "bpdc", name: "뒤걸어 한길긴뜨기", aliases: ["뒤걸어뜨기", "뒤걸어", "뒤걸어한길긴뜨기", "bpdc"],
-    consumes: 1, produces: 1, h: 10,
-    draw: (ext = 0) => `<path d="M0 ${6 + ext} L0 -10 M-4 -10 L4 -10 M-3 -2 L3 -5 M-3 ${10 + ext} Q0 ${5 + ext} 3 ${10 + ext}"/>`
   }
 ];
 
-/* 늘림/줄임 수식어. 앞에 기본 기호가 없으면 짧은뜨기로 간주합니다. */
+/* 수식어: "기본 기호 + 수식어" 꼴. 앞에 기본 기호가 없으면 defaultStitch로 간주.
+   counted  : "N코" 를 받음 (늘려뜨기 2코, 구슬뜨기 3코 …)
+   stem     : 기본 기호를 그대로 그리고 장식만 더함 (기둥 늘이기 ext 적용)
+   variant  : 수식어 뒤에 기본 기호가 와도 됨 ("앞걸어뜨기 한길긴뜨기") */
 const MODIFIERS = [
-  { kind: "inc", aliases: ["늘려뜨기", "늘림", "늘리기", "늘려", "inc", "증가"], defaultN: 2 },
-  { kind: "dec", aliases: ["모아뜨기", "줄임뜨기", "줄임", "줄이기", "모아", "dec", "감소"], defaultN: 2 }
+  { kind: "inc", name: "늘려뜨기", aliases: ["늘려뜨기", "늘림", "늘리기", "늘려", "inc", "증가"], defaultN: 2, counted: true, defaultStitch: "sc" },
+  { kind: "dec", name: "모아뜨기", aliases: ["모아뜨기", "줄임뜨기", "줄임", "줄이기", "모아", "dec", "감소"], defaultN: 2, counted: true, defaultStitch: "sc" },
+  { kind: "flo", name: "앞이랑뜨기", aliases: ["앞이랑뜨기", "앞이랑", "앞반코", "앞반코뜨기", "flo"], defaultStitch: "sc", stem: true, variant: true },
+  { kind: "blo", name: "뒷이랑뜨기", aliases: ["뒷이랑뜨기", "뒤이랑뜨기", "뒷이랑", "뒤이랑", "이랑뜨기", "이랑", "뒤반코", "뒷반코", "blo"], defaultStitch: "sc", stem: true, variant: true },
+  { kind: "fp", name: "앞걸어뜨기", aliases: ["앞걸어뜨기", "앞걸어", "fp", "fpdc"], defaultStitch: "dc", stem: true, variant: true },
+  { kind: "bp", name: "뒤걸어뜨기", aliases: ["뒤걸어뜨기", "뒤걸어", "뒷걸어뜨기", "뒷걸어", "bp", "bpdc"], defaultStitch: "dc", stem: true, variant: true },
+  { kind: "puff", name: "구슬뜨기", aliases: ["구슬뜨기", "구슬", "퍼프뜨기", "퍼프", "puff", "bobble"], defaultN: 3, counted: true, defaultStitch: "hdc", variant: true },
+  { kind: "popcorn", name: "팝콘뜨기", aliases: ["팝콘뜨기", "팝콘", "popcorn"], defaultN: 5, counted: true, defaultStitch: "dc", variant: true }
 ];
+const MOD_BY_KIND = Object.fromEntries(MODIFIERS.map(m => [m.kind, m]));
 
 /* 시작 방법 (첫 줄) — 매직링은 원 하나(○), 사슬 원형은 사슬 N개를 원으로 */
 const STARTS = [
@@ -153,6 +143,48 @@ function drawFan(def, kind, k) {
   return out;
 }
 
+/* 앞이랑/뒷이랑/앞걸어/뒤걸어: 기본 기호에 장식만 더함 (카드 사진 기준)
+   앞이랑 = 머리 위 가로선, 뒷이랑 = 발 아래 가로선, 앞걸어 = 기둥 끝 왼쪽 갈고리(J), 뒤걸어 = 오른쪽 갈고리 */
+function drawVariant(def, kind, ext) {
+  const h = def.h, b = h + ext;                       // b = 기둥 끝
+  let out = def.draw(ext);
+  if (kind === "flo") out += `<path d="M-4 ${-h - 3} L4 ${-h - 3}"/>`;
+  if (kind === "blo") out += `<path d="M-4 ${b + 3} L4 ${b + 3}"/>`;
+  if (kind === "fp" || kind === "bp") {
+    const sgn = kind === "fp" ? -1 : 1;              // 갈고리가 감기는 쪽
+    const y0 = h >= 9 ? b : b + 2.5;                  // 짧은뜨기(X)는 짧은 꼬리를 먼저
+    if (h < 9) out += `<path d="M0 ${h} L0 ${y0}"/>`;
+    out += `<path d="M0 ${y0} L0 ${y0 + 2} Q0 ${y0 + 6} ${3.5 * sgn} ${y0 + 6} Q${6 * sgn} ${y0 + 6} ${6 * sgn} ${y0 + 3}"/>`;
+  }
+  return out;
+}
+
+/* 구슬뜨기 / 팝콘뜨기: 가닥 n개(바깥 2 + 안쪽 n-2)가 아래 한 점에 모임.
+   구슬 = 위도 한 점(뾰족한 타원), 팝콘 = 위가 둥글고 꼭대기 가로선으로 닫힘. 빗금은 기본 기호대로 가닥마다. */
+function drawCluster(def, kind, n) {
+  const h = def.h, k = Math.max(2, n);
+  const w = 3.5 + k * 0.7;                             // 반너비
+  const ticks = { dc: 1, tr: 2, dtr: 3 }[def.id] || 0;
+  const f = (v) => (Math.round(v * 10) / 10).toString();
+  let out = "";
+  const top = kind === "puff" ? -h : -h + 2;
+  for (let i = 0; i < k; i++) {
+    const c = k === 1 ? 0 : ((i - (k - 1) / 2) / ((k - 1) / 2)) * w;   // 가닥 가운데 x
+    const cx = kind === "puff" ? c * 2 : c * 1.6, ex = kind === "puff" ? 0 : c * 0.9;   // 제어점 / 끝점
+    out += `<path d="M0 ${h} Q${f(cx)} 0 ${f(ex)} ${top}"/>`;
+    const mx = 0.5 * cx + 0.25 * ex, my = 0.25 * h + 0.25 * top;   // 곡선 가운데 (빗금 자리)
+    for (let t = 0; t < ticks; t++) {
+      const y = my + (t - (ticks - 1) / 2) * 4.5;
+      out += `<path d="M${f(mx - 2.5)} ${f(y + 1.3)} L${f(mx + 2.5)} ${f(y - 1.3)}"/>`;
+    }
+  }
+  if (kind === "popcorn") {
+    const tw = w * 0.9;
+    out += `<path d="M${f(-tw)} ${top} Q0 ${top - 5} ${f(tw)} ${top} M${f(-tw - 1)} ${top} L${f(tw + 1)} ${top}"/>`;
+  }
+  return out;
+}
+
 /* ---- 묶음 기호 (layout이 만든 요소 종류별) ---- */
 const CH_LEN = 9.8;    // 사슬 동그라미 하나의 간격(동그라미 8.4 + 틈 1.4, 겹치지 않게)
 
@@ -197,7 +229,9 @@ function drawElement(el) {
   if (el.kind === "join") return drawJoin();
   const def = STITCH_BY_ID[el.stitch] || STITCH_BY_ID.sc;
   if (el.mod === "inc" || el.mod === "dec") return drawFan(def, el.mod, el.n);
+  if (el.mod === "puff" || el.mod === "popcorn") return drawCluster(def, el.mod, el.n);
+  if (el.mod && MOD_BY_KIND[el.mod] && MOD_BY_KIND[el.mod].stem) return drawVariant(def, el.mod, el.ext || 0);
   return def.draw(el.ext || 0);
 }
 
-window.CROCHET_SYMBOLS = { STITCHES, MODIFIERS, STARTS, STITCH_BY_ID, ALIAS_INDEX, drawElement, drawChain, drawStanding, drawJoin, drawMagicRing, CH_LEN };
+window.CROCHET_SYMBOLS = { STITCHES, MODIFIERS, MOD_BY_KIND, STARTS, STITCH_BY_ID, ALIAS_INDEX, drawElement, drawChain, drawStanding, drawJoin, drawMagicRing, CH_LEN };
