@@ -10,7 +10,9 @@
   const { LAYOUTS, layout } = window.CROCHET_LAYOUT;
   const $ = (id) => document.getElementById(id);
   const KEY = "crochet-chart-v1";
-  const PAPER = "#FAF7F0", CHART_INK = "#2B2A26", LABEL_INK = "#4A473F", GUIDE = "#E4DFD2";
+  const PAPER = "#FAF7F0", CHART_INK = "#2B2A26", LABEL_INK = "#4A473F", GUIDE = "#D9D3C4";
+  const INK_W = 1.1;                 // 기호 선 굵기 (가늘수록 실제 도안 인쇄물에 가까움)
+  const GUIDE_ATTR = `fill="none" stroke="${GUIDE}" stroke-width="0.6" stroke-dasharray="2 3"`;   // 단 경계 안내선: 옅은 점선
 
   /* ---------------- 저장소 ---------------- */
   const uid = () => Math.random().toString(36).slice(2, 9);
@@ -82,9 +84,9 @@
     const ex = !!opts.forExport;
     let s = "";
     lay.guides.forEach(g => {
-      if (g.type === "circle") s += `<circle class="guide" r="${g.r.toFixed(2)}" fill="none" stroke="${GUIDE}" stroke-width="0.8"/>`;
-      else if (g.type === "square") s += `<rect class="guide" x="${(-g.r).toFixed(2)}" y="${(-g.r).toFixed(2)}" width="${(2 * g.r).toFixed(2)}" height="${(2 * g.r).toFixed(2)}" rx="3" fill="none" stroke="${GUIDE}" stroke-width="0.8"/>`;
-      else s += `<line class="guide" x1="${g.x1.toFixed(1)}" x2="${g.x2.toFixed(1)}" y1="${g.y.toFixed(1)}" y2="${g.y.toFixed(1)}" stroke="${GUIDE}" stroke-width="0.8"/>`;
+      if (g.type === "circle") s += `<circle class="guide" r="${g.r.toFixed(2)}" ${GUIDE_ATTR}/>`;
+      else if (g.type === "square") s += `<rect class="guide" x="${(-g.r).toFixed(2)}" y="${(-g.r).toFixed(2)}" width="${(2 * g.r).toFixed(2)}" height="${(2 * g.r).toFixed(2)}" rx="3" ${GUIDE_ATTR}/>`;
+      else s += `<line class="guide" x1="${g.x1.toFixed(1)}" x2="${g.x2.toFixed(1)}" y1="${g.y.toFixed(1)}" y2="${g.y.toFixed(1)}" ${GUIDE_ATTR}/>`;
     });
     s += `<g class="start">${lay.startShape}</g>`;
     lay.nodes.forEach(n => {
@@ -105,14 +107,14 @@
     const w = Math.round(b.w * scale), h = Math.round(b.h * scale);
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${b.x} ${b.y} ${b.w} ${b.h}" width="${w}" height="${h}">` +
       `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="${PAPER}"/>` +
-      `<g style="color:${CHART_INK}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${worldMarkup({ forExport: true })}</g></svg>`;
+      `<g style="color:${CHART_INK}" fill="none" stroke="currentColor" stroke-width="${INK_W}" stroke-linecap="round" stroke-linejoin="round">${worldMarkup({ forExport: true })}</g></svg>`;
   }
 
   /* ---------------- 화면 그리기 ---------------- */
   const svg = $("chart"), world = $("world"), wrap = $("chartwrap");
   world.setAttribute("class", "chart-ink");
   world.setAttribute("fill", "none"); world.setAttribute("stroke", "currentColor");
-  world.setAttribute("stroke-width", "1.4"); world.setAttribute("stroke-linecap", "round"); world.setAttribute("stroke-linejoin", "round");
+  world.setAttribute("stroke-width", String(INK_W)); world.setAttribute("stroke-linecap", "round"); world.setAttribute("stroke-linejoin", "round");
   const view = { k: 1, tx: 0, ty: 0 };
   let lastBounds = null;
   let editing = false, selectedKey = null;
@@ -590,7 +592,7 @@
     items.forEach(it => {
       const d = document.createElement("div"); d.className = "item";
       const inner = it.svg || SYM.drawElement(it.el);
-      d.innerHTML = `<svg viewBox="-20 -17 40 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${inner}</svg><span>${it.label}<small>${it.sub}</small></span>`;
+      d.innerHTML = `<svg viewBox="-20 -17 40 34" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg><span>${it.label}<small>${it.sub}</small></span>`;
       box.appendChild(d);
     });
   }

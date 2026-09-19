@@ -19,7 +19,7 @@
   const SYM = window.CROCHET_SYMBOLS;
   const DEG = Math.PI / 180;
   const S = 11;         // 이웃한 코 사이 거리
-  const ROW_GAP = 32;   // 단 사이 거리(최대). 실제로는 단의 가장 긴 기호에 맞춰 22~36
+  const ROW_GAP = 36;   // 단 사이 거리(기준). 실제로는 단의 가장 긴 기호에 맞춰 26~40 — 기둥이 길수록 묶음이 평행에 가까워짐
   /* 단 높이: 그 단에서 가장 큰 기호 기준 */
   function rowGap(row) {
     let h = 5;
@@ -27,7 +27,7 @@
       if (e.kind === "st") { const d = SYM.STITCH_BY_ID[e.stitch]; if (d) h = Math.max(h, d.h); }
       else if (e.kind === "standing") h = Math.max(h, e.n * 3.25);
     });
-    return Math.max(22, Math.min(36, 2 * h + 12));
+    return Math.max(26, Math.min(40, 2 * h + 16));
   }
   /* 원형에서 코에 뜨는 단: 실제 도안처럼 둘레에 고르게 (사슬 묶음·늘림은 폭만큼 자리 차지) */
   function evenRing(els) {
@@ -39,7 +39,7 @@
     return v;
   }
   const R0 = 6;         // 매직링 반지름
-  const FAN = 7.5;      // 같은 공간에 모여 뜨는 묶음의 기호 끝 간격
+  const FAN = 9.5;      // 같은 공간에 모여 뜨는 묶음의 기호 끝 간격 (가로선 8 + 틈, 서로 안 겹치게)
 
   const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
   function circMean(fs) {   // 둘레 위치(0~1)의 원형 평균
@@ -221,7 +221,7 @@
         const f = j / n;
         prev.st.push(f);
         const P = projCircle(f, R);
-        startShape += `<g transform="translate(${P.x.toFixed(2)} ${P.y.toFixed(2)}) rotate(${(-360 * f).toFixed(1)})"><ellipse rx="5" ry="2.6"/></g>`;
+        startShape += `<g transform="translate(${P.x.toFixed(2)} ${P.y.toFixed(2)}) rotate(${(-360 * f).toFixed(1)})"><ellipse rx="4.2" ry="2.2"/></g>`;
       }
       guides.push({ type: "circle", r: R });
     } else {
@@ -266,7 +266,7 @@
           if (e.kind === "st" && !e.mod) {
             const def = SYM.STITCH_BY_ID[e.stitch];
             const D = Math.hypot(P.x - A.x, P.y - A.y);
-            if (def && def.h >= 9) ext = Math.max(0, Math.min(40, D - 2 * def.h - (usable ? 3 : R0 + 2)));
+            if (def && def.h >= 9) ext = Math.max(0, Math.min(48, D - 2 * def.h - (usable ? 3 : R0 + 2)));
           }
         }
         const el = { ...e, ext };
@@ -299,7 +299,7 @@
     for (let j = 0; j < n; j++) {
       const x = j * S;
       prev.st.push(x);
-      startShape += `<g transform="translate(${x} 0)"><ellipse rx="5" ry="2.6"/></g>`;
+      startShape += `<g transform="translate(${x} 0)"><ellipse rx="4.2" ry="2.2"/></g>`;
     }
     let minX = 0, maxX = (n - 1) * S;
     prev.st.reverse();   // 1단은 오른쪽→왼쪽
@@ -324,7 +324,7 @@
           rot = Math.atan2(-gap, x - r.anchor[i]) / DEG + 90;
           const def = SYM.STITCH_BY_ID[e.stitch];
           const D = Math.hypot(gap, x - r.anchor[i]);
-          if (def && def.h >= 9 && !e.mod) ext = Math.max(0, Math.min(40, D - 2 * def.h - 3));
+          if (def && def.h >= 9 && !e.mod) ext = Math.max(0, Math.min(48, D - 2 * def.h - 3));
         }
         const yy = e.kind === "standing" ? y + 2 : y;
         nodes.push({ key: `${row.index}-${i}`, row: row.index, i, x, y: yy, rot, el: { ...e, ext } });

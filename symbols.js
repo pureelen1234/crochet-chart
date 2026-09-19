@@ -19,12 +19,12 @@ const STITCHES = [
   {
     id: "standing", name: "기둥사슬", aliases: ["기둥사슬", "기둥코", "기둥", "돌림사슬"],
     consumes: 0, produces: 0, h: 4, pseudo: true,   // 단 시작 사슬. 개수는 layout에서 세로로 쌓아 그림
-    draw: () => `<ellipse rx="2.8" ry="5"/>`
+    draw: () => `<ellipse rx="2.4" ry="4.4"/>`
   },
   {
     id: "ch", name: "사슬뜨기", aliases: ["사슬", "사슬뜨기", "ch", "체인"],
     consumes: 0, produces: 1, h: 4,
-    draw: () => `<ellipse rx="5" ry="2.6"/>`
+    draw: () => `<ellipse rx="4.2" ry="2.2"/>`
   },
   {
     id: "sl", name: "빼뜨기", aliases: ["빼뜨기", "빼기", "sl", "slst", "빼"],
@@ -120,7 +120,7 @@ function drawFan(def, kind, k) {
 }
 
 /* ---- 묶음 기호 (layout이 만든 요소 종류별) ---- */
-const CH_LEN = 10.5;   // 사슬 동그라미 하나의 길이(이어 붙일 때 간격)
+const CH_LEN = 9.8;    // 사슬 동그라미 하나의 간격(동그라미 8.4 + 틈 1.4, 겹치지 않게)
 
 /* 사슬 N개를 끝과 끝이 붙게 한 줄로. corner=true면 모서리처럼 가운데가 바깥쪽으로 꺾임 */
 function drawChain(n, corner) {
@@ -130,9 +130,9 @@ function drawChain(n, corner) {
     if (corner && n >= 2) {
       const side = k < n / 2 ? -1 : 1;           // 왼쪽 절반 / 오른쪽 절반
       const bend = 32 * side;                    // 바깥쪽(-y)으로 모이는 ^ 모양
-      out += `<g transform="translate(${x.toFixed(1)} 1.2) rotate(${bend})"><ellipse rx="5" ry="2.6"/></g>`;
+      out += `<g transform="translate(${x.toFixed(1)} 1.2) rotate(${bend})"><ellipse rx="4.2" ry="2.2"/></g>`;
     } else {
-      out += `<ellipse cx="${x.toFixed(1)}" rx="5" ry="2.6"/>`;
+      out += `<ellipse cx="${x.toFixed(1)}" rx="4.2" ry="2.2"/>`;
     }
   }
   return out;
@@ -142,8 +142,8 @@ function drawChain(n, corner) {
 function drawStanding(n) {
   let out = "";
   for (let k = 0; k < n; k++) {
-    const y = ((n - 1) / 2 - k) * 6.5;           // 아래(안쪽)부터 위(바깥쪽)로
-    out += `<ellipse cy="${y.toFixed(1)}" rx="2.8" ry="3.6"/>`;
+    const y = ((n - 1) / 2 - k) * 6.2;           // 아래(안쪽)부터 위(바깥쪽)로
+    out += `<ellipse cy="${y.toFixed(1)}" rx="2.4" ry="3.3"/>`;
   }
   return out;
 }

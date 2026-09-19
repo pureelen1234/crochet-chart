@@ -44,7 +44,7 @@
 | `layout.js` | 코 목록 → 좌표 (원형 / 평면 배치). 새 규격은 여기에 추가 |
 | `app.js` | 앱 본체 (저장, 그리기, 편집, PDF/PNG) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | 홈 화면 앱(PWA) 설정 |
-| `serve.ps1` | 컴퓨터에서 미리보기용 로컬 서버 (`powershell -File serve.ps1` → http://localhost:8765) |
+| `serve.ps1`, `serve.mjs` | 컴퓨터에서 미리보기용 로컬 서버 (윈도우 `powershell -File serve.ps1`, 맥 `node serve.mjs` → http://localhost:8765) |
 
 ## 기호 추가하기
 

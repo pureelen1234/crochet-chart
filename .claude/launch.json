@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "preview", "runtimeExecutable": "powershell", "runtimeArgs": ["-ExecutionPolicy", "Bypass", "-File", "serve.ps1"], "port": 8765 }
+    { "name": "preview", "runtimeExecutable": "powershell", "runtimeArgs": ["-ExecutionPolicy", "Bypass", "-File", "serve.ps1"], "port": 8765 },
+    { "name": "preview-mac", "runtimeExecutable": "node", "runtimeArgs": ["serve.mjs"], "port": 8765 }
   ]
 }
