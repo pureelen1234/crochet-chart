@@ -86,14 +86,16 @@ button { cursor: pointer; }
   max-width: 1200px; margin: 0 auto;
 }
 .main > * { min-width: 0; }
-/* 휴대폰: 입력 → 도안 → 규격 → 편집 → 저장 → 작품정보 순서 */
-.a-input { order: 1; } .a-chart { order: 2; } .a-format { order: 3; } .a-edit { order: 4; }
-.a-actions { order: 5; } .a-info { order: 6; } .a-note { order: 7; }
+/* 세로(휴대폰·아이패드 세로): 도안 → 입력 → 키패드 순서. 도안을 보면서 아래 키패드를 엄지로 누르는 자세 */
+.a-chart { order: 1; } .a-input { order: 2; } .a-keypad { order: 3; } .a-format { order: 4; } .a-edit { order: 5; }
+.a-actions { order: 6; } .a-info { order: 7; } .a-note { order: 8; }
+/* 가로(아이패드 가로·데스크톱): 왼쪽 입력+키패드, 오른쪽 도안 */
 @media (min-width: 900px) {
   .main {
-    grid-template-columns: minmax(320px, 420px) 1fr;
+    grid-template-columns: minmax(340px, 460px) 1fr;
     grid-template-areas:
       "input chart"
+      "keypad chart"
       "format chart"
       "info chart"
       "info edit"
@@ -101,7 +103,7 @@ button { cursor: pointer; }
       "note note";
     align-items: start;
   }
-  .a-input { grid-area: input; } .a-chart { grid-area: chart; } .a-format { grid-area: format; }
+  .a-input { grid-area: input; } .a-keypad { grid-area: keypad; } .a-chart { grid-area: chart; } .a-format { grid-area: format; }
   .a-edit { grid-area: edit; } .a-actions { grid-area: actions; } .a-info { grid-area: info; } .a-note { grid-area: note; }
 }
 
@@ -119,8 +121,9 @@ button { cursor: pointer; }
 .editor {
   display: grid; grid-template-columns: 44px 1fr;
   border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2);
-  overflow: hidden; height: 190px;
+  overflow: hidden; height: 150px;
 }
+@media (min-width: 900px) { .editor { height: 190px; } }
 .editor .gutter {
   margin: 0; padding: 10px 6px 10px 0; text-align: right;
   font-size: 12px; line-height: 24px; color: var(--ink-3);
@@ -128,6 +131,7 @@ button { cursor: pointer; }
   font-variant-numeric: tabular-nums; white-space: pre;
 }
 .editor .gutter .warn { color: var(--warn); }
+.editor .gutter .cur { color: var(--accent); font-weight: 700; }
 .editor textarea {
   margin: 0; border: 0; background: transparent; resize: none; width: 100%; height: 100%;
   padding: 10px 12px; font-size: 15px; line-height: 24px; white-space: pre; overflow: auto;
@@ -144,6 +148,29 @@ button { cursor: pointer; }
 }
 .rows .chip.warn { border-color: var(--warn); color: var(--warn); }
 .rows .chip.start { color: var(--ink-3); }
+.rows .chip { cursor: pointer; }
+.rows .chip.cur { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+
+/* ---------- 코 키패드 (키보드 없이 탭으로 입력) ---------- */
+.keys { display: grid; gap: 6px; }
+.keys-6 { grid-template-columns: repeat(6, 1fr); }
+.keys-num { grid-template-columns: repeat(10, 1fr); }
+@media (max-width: 480px) { .keys-num { grid-template-columns: repeat(5, 1fr); } }
+.key {
+  min-height: 60px; padding: 5px 2px 4px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  display: grid; place-items: center; align-content: center; gap: 2px; touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.key:active { background: var(--accent-soft); border-color: var(--accent); }
+.key svg { width: 32px; height: 28px; display: block; color: var(--ink); }
+.key b { font-size: 22px; font-weight: 500; line-height: 1.1; }
+.key small { font-size: 10.5px; color: var(--ink-3); line-height: 1.1; text-align: center; word-break: keep-all; }
+.keys-num .key { min-height: 46px; }
+.keys-num .key b { font-size: 20px; }
+.key.danger b, .key.danger svg { color: var(--danger); }
+.key.accent { background: var(--accent-soft); }
+.keys .key.more[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.keys .key.more[aria-pressed="true"] small { color: var(--bg); }
 
 /* 규격 선택 */
 .seg { display: flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 3px; }
@@ -164,7 +191,8 @@ button { cursor: pointer; }
 
 /* ---------- 도안 캔버스 ---------- */
 .chartcard { padding: 0; overflow: hidden; }
-.chartwrap { position: relative; background: var(--paper); height: min(62vh, 560px); min-height: 320px; }
+/* 세로 화면: 도안 + 입력칸 + 키패드가 한 화면(아이패드 미니 세로 1133px)에 들어오는 높이 */
+.chartwrap { position: relative; background: var(--paper); height: min(36vh, 560px); min-height: 280px; }
 @media (min-width: 900px) { .chartwrap { height: calc(100vh - 220px); min-height: 480px; } }
 .chartwrap svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
 .chart-ink { color: var(--chart-ink); }

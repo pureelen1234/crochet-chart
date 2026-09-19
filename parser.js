@@ -68,8 +68,13 @@
         pos++;
         const r = parseItem(tokens, pos, errors);
         pos = r.pos;
-        const id = ++sgCounter;
-        r.items.forEach(it => { if (it.sg == null) { it.sg = id; it.spaceN = tk.n; } });
+        // "공간에 (…)*4" 처럼 반복 묶음이면 반복마다 다른 공간 (4곳에 뜸)
+        const per = r.times > 1 ? r.items.length / r.times : r.items.length;
+        let id = ++sgCounter;
+        r.items.forEach((it, k) => {
+          if (k > 0 && per > 0 && k % per === 0) id = ++sgCounter;
+          if (it.sg == null) { it.sg = id; it.spaceN = tk.n; }
+        });
         items.push(...r.items);
         continue;
       }
@@ -108,7 +113,7 @@
           items.push(c);
         });
       }
-      return { items, pos };
+      return { items, pos, times };
     }
     if (tk.t === ")") return { items: [], pos };
     if (tk.t === "*") { errors.push("*는 괄호 뒤에만 쓸 수 있어요"); return { items: [], pos: pos + 1 }; }

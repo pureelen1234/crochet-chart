@@ -144,19 +144,28 @@
 
   /* ---------------- 입력부 ---------------- */
   const ta = $("pattern"), gutter = $("gutter");
+  let rowLine = [];        // rowLine[단 번호] = 그 단이 있는 줄 번호 (0부터). rowLine[0] = 시작 줄
+  function lineLabel(idx) { // 줄 번호 → "시작" / "N단" / "" (키패드 헤더용)
+    const r = rowLine.indexOf(idx);
+    return r < 0 ? "" : r === 0 ? "시작" : `${r}단`;
+  }
   function renderGutter() {
     const lines = ta.value.split(/\r?\n/);
     let rowIdx = 0, seenFirst = false;
-    const out = lines.map(l => {
+    rowLine = [];
+    const out = lines.map((l, li) => {
       const t = l.trim();
-      if (!t || t.startsWith("#") || t.startsWith("//")) return " ";
-      if (!seenFirst) { seenFirst = true; if (parsed.startFromText) return "시작"; }
+      const wrap = (txt, cls) => `<span class="${[cls, li === curLine ? "cur" : ""].filter(Boolean).join(" ")}">${txt}</span>`;
+      if (!t || t.startsWith("#") || t.startsWith("//")) return wrap(li === curLine ? "·" : " ", "");
+      if (!seenFirst) { seenFirst = true; if (parsed.startFromText) { rowLine[0] = li; return wrap("시작", ""); } }
       rowIdx++;
+      rowLine[rowIdx] = li;
       const row = parsed.rows[rowIdx - 1];
-      return row && row.warnings.length ? `<span class="warn">${rowIdx}</span>` : String(rowIdx);
+      return wrap(String(rowIdx), row && row.warnings.length ? "warn" : "");
     });
     gutter.innerHTML = out.join("\n") + "\n";
     gutter.scrollTop = ta.scrollTop;
+    renderKpStatus();
   }
   ta.addEventListener("scroll", () => { gutter.scrollTop = ta.scrollTop; });
   function renderRows() {
@@ -168,11 +177,13 @@
     sc.className = "chip start";
     sc.textContent = st.kind === "magic" ? "매직링" : st.kind === "chainring" ? `사슬 ${st.n}코 원형` : `기초 사슬 ${st.n}코`;
     box.appendChild(sc);
+    if (rowLine[0] != null) sc.addEventListener("click", () => setCurLine(rowLine[0]));
     parsed.rows.forEach(r => {
       const c = document.createElement("span");
-      c.className = "chip" + (r.warnings.length ? " warn" : "");
+      c.className = "chip" + (r.warnings.length ? " warn" : "") + (rowLine[r.index] === curLine ? " cur" : "");
       c.textContent = `${r.index}단 ${r.produced}코`;
       if (r.warnings.length) c.title = r.warnings.join(" / ");
+      c.addEventListener("click", () => { if (rowLine[r.index] != null) setCurLine(rowLine[r.index]); });
       box.appendChild(c);
     });
     const warn = parsed.rows.find(r => r.warnings.length);
@@ -190,6 +201,156 @@
     clearTimeout(inputTimer);
     inputTimer = setTimeout(() => { rebuild(); renderGutter(); renderRows(); renderChart(); }, 120);
   });
+
+  /* ---------------- 코 키패드 ----------------
+     키보드 없이(아이패드) 버튼을 눌러 도안을 적는다. 텍스트가 여전히 원본이고,
+     키패드는 "현재 줄(curLine)" 끝에 낱말을 이어 붙이면서 쉼표·띄어쓰기를 알아서 넣는 앞단이다. */
+  let curLine = 0;
+  const KP_UNDO = [];
+  const lineAt = (pos) => ta.value.slice(0, pos).split("\n").length - 1;
+  function lineRange(idx) {
+    const lines = ta.value.split("\n");
+    idx = Math.max(0, Math.min(idx, lines.length - 1));
+    let start = 0; for (let i = 0; i < idx; i++) start += lines[i].length + 1;
+    return { idx, start, end: start + lines[idx].length, lines };
+  }
+  function setCurLine(idx, focus) {
+    const r = lineRange(idx);
+    curLine = r.idx;
+    if (document.activeElement === ta || focus) { ta.setSelectionRange(r.end, r.end); if (focus) ta.focus(); }
+    ta.scrollTop = Math.max(0, r.idx * 24 - ta.clientHeight / 2 + 12);
+    renderGutter(); renderRows();
+  }
+  ["click", "keyup", "focus"].forEach(ev => ta.addEventListener(ev, () => { const l = lineAt(ta.selectionStart); if (l !== curLine) { curLine = l; renderGutter(); renderRows(); } }));
+  ta.addEventListener("input", (e) => { if (e.isTrusted) curLine = lineAt(ta.selectionStart); });   // 키패드가 보낸 input은 제외
+
+  /* 현재 줄 끝에 낱말 하나를 이어 붙인다. kind: st(기호) num(숫자) mod(늘림/줄임) sp(공간에) open close mul */
+  function kpInsert(kind, text) {
+    const r = lineRange(curLine);
+    let line = r.lines[r.idx];
+    const t = line.replace(/\s+$/, "");
+    const prev = t.slice(-1);
+    const empty = !t, isDigit = /\d/.test(prev), isOpen = prev === "(", isClose = prev === ")", isMul = prev === "*";
+    const isSpace = /공간에$/.test(t), isWord = /[가-힣a-zA-Z]$/.test(prev) && !isSpace;
+    let add = "";
+    switch (kind) {
+      case "st": add = (empty || isOpen || isMul) ? text : isSpace ? " " + text : ", " + text; break;
+      case "num": add = (isDigit || isMul) ? text : isClose ? "*" + text : isWord ? " " + text : (empty || isOpen) ? text : ", " + text; break;
+      case "mod": add = isDigit ? "코 " + text : isWord ? " " + text : (empty || isOpen) ? text : isSpace ? " " + text : ", " + text; break;
+      case "sp": add = empty ? "공간에" : " 공간에"; break;
+      case "open": add = (empty || isOpen) ? "(" : isSpace ? " (" : ", ("; break;
+      case "close": add = ")"; break;
+      case "mul": add = "*"; break;
+    }
+    kpApply(r, t + add);
+  }
+  /* 마지막 낱말 하나 지우기 (쉼표·띄어쓰기 포함) */
+  function kpDelete() {
+    const r = lineRange(curLine);
+    let t = r.lines[r.idx].replace(/[\s,]+$/, "");
+    if (!t) {   // 빈 줄이면 줄 자체를 지우고 윗줄로
+      if (r.lines.length > 1) { r.lines.splice(r.idx, 1); KP_UNDO.push(ta.value); ta.value = r.lines.join("\n"); curLine = Math.max(0, r.idx - 1); afterKp(); }
+      return;
+    }
+    t = t.replace(/(공간에|\d+코|\d+|[()*]|[가-힣a-zA-Z]+)$/, "").replace(/[\s,]+$/, "");
+    kpApply(r, t);
+  }
+  function kpNewRow() {
+    const r = lineRange(curLine);
+    KP_UNDO.push(ta.value);
+    r.lines.splice(r.idx + 1, 0, "");
+    ta.value = r.lines.join("\n"); curLine = r.idx + 1;
+    afterKp();
+  }
+  function kpUndo() {
+    if (!KP_UNDO.length) return toast("되돌릴 게 없어요");
+    ta.value = KP_UNDO.pop(); curLine = Math.min(curLine, ta.value.split("\n").length - 1);
+    afterKp();
+  }
+  function kpApply(r, newLine) {
+    KP_UNDO.push(ta.value); if (KP_UNDO.length > 60) KP_UNDO.shift();
+    r.lines[r.idx] = newLine;
+    ta.value = r.lines.join("\n");
+    afterKp();
+  }
+  function afterKp() {
+    const r = lineRange(curLine);
+    if (document.activeElement === ta) ta.setSelectionRange(r.end, r.end);
+    ta.dispatchEvent(new Event("input"));   // 저장 + 다시 그리기 (기존 경로)
+    ta.scrollTop = Math.max(0, r.idx * 24 - ta.clientHeight / 2 + 12);
+    try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+  }
+  function renderKpStatus() {
+    const lbl = lineLabel(curLine);
+    const r = lineRange(curLine);
+    const txt = r.lines[r.idx].trim();
+    $("kp-cur").textContent = (lbl ? `${lbl} 입력 중` : (txt ? "입력 중" : "빈 줄")) + (curLine === r.lines.length - 1 && !txt && lbl === "" ? " · 여기에 다음 단을 적어요" : "");
+  }
+
+  /* 버튼 만들기: 기호는 크게(SVG), 이름은 작게 */
+  const KEY_SVG = (inner, vb) => `<svg viewBox="${vb || "-16 -15 32 30"}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  const stSvg = (id, mod, n) => KEY_SVG(SYM.drawElement({ kind: "st", stitch: id, mod: mod || null, n: n || 1 }));
+  function key(label, inner, onTap, cls) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "key" + (cls ? " " + cls : "");
+    b.innerHTML = inner + `<small>${label}</small>`;
+    b.addEventListener("pointerdown", (e) => e.preventDefault());   // 입력칸 포커스를 뺏지 않게
+    b.addEventListener("click", onTap);
+    return b;
+  }
+  // 버튼 이름은 기호 이름, 실제로 적히는 글자는 첫 별칭 (예: "이랑뜨기(뒤반코)" → "이랑뜨기")
+  const stKey = (id, label) => { const d = SYM.STITCH_BY_ID[id]; return key(label || d.name, stSvg(id), () => kpInsert("st", label || d.aliases[0])); };
+  const txtKey = (label, glyph, onTap, cls) => key(label, `<b>${glyph}</b>`, onTap, cls);
+  function renderKeypad() {
+    const main = $("kp-main"), sub = $("kp-sub"), num = $("kp-num"), op = $("kp-op"), more = $("kp-more");
+    [main, sub, num, op, more].forEach(el => el.innerHTML = "");
+    // 1열: 주로 쓰는 기호 (아내 확인: 사슬·짧은뜨기·긴뜨기·한길긴뜨기·두길긴뜨기·빼뜨기)
+    main.append(
+      key("사슬", KEY_SVG(SYM.drawChain(1)), () => kpInsert("st", "사슬")),
+      stKey("sc", "짧은뜨기"), stKey("hdc", "긴뜨기"), stKey("dc", "한길긴뜨기"), stKey("tr", "두길긴뜨기"),
+      key("빼뜨기", KEY_SVG(SYM.drawJoin()), () => kpInsert("st", "빼뜨기"))
+    );
+    // 2열: 구조어
+    sub.append(
+      key("기둥사슬", KEY_SVG(SYM.drawStanding(3)), () => kpInsert("st", "기둥사슬")),
+      key("늘려뜨기", stSvg("sc", "inc", 2), () => kpInsert("mod", "늘려뜨기")),
+      key("모아뜨기", stSvg("sc", "dec", 2), () => kpInsert("mod", "모아뜨기")),
+      txtKey("공간에", "⌒", () => kpInsert("sp")),
+      key("매직링", KEY_SVG(SYM.drawMagicRing()), () => kpInsert("st", "매직링")),
+      txtKey("다른 기호", "…", () => { const on = more.hidden; more.hidden = !on; moreBtn.setAttribute("aria-pressed", on ? "true" : "false"); }, "more")
+    );
+    const moreBtn = sub.lastElementChild;
+    // 3열: 숫자
+    "1234567890".split("").forEach(d => num.append(txtKey("", d, () => kpInsert("num", d))));
+    // 4열: 괄호·반복·줄·지우기
+    op.append(
+      txtKey("반복 시작", "(", () => kpInsert("open")),
+      txtKey("반복 끝", ")", () => kpInsert("close")),
+      txtKey("×N 반복", "×", () => kpInsert("mul")),
+      txtKey("다음 단", "↵", kpNewRow, "accent"),
+      txtKey("하나 지움", "⌫", kpDelete, "danger"),
+      txtKey("되돌리기", "↶", kpUndo)
+    );
+    // 더보기: 나머지 기호 + 다른 시작 방법
+    SYM.STITCHES.filter(s => !s.pseudo && !["ch", "sc", "hdc", "dc", "tr", "sl"].includes(s.id)).forEach(s => more.append(stKey(s.id)));
+    more.append(
+      txtKey("기초 사슬", "—", () => kpInsert("st", "기초 사슬")),
+      txtKey("사슬 원형", "◯", () => kpInsert("st", "사슬 원형 시작"))
+    );
+  }
+  renderKeypad();
+
+  /* 키보드/키패드 전환: 터치 기기는 기본이 키패드(소프트 키보드 안 뜸) */
+  let kbdMode = !matchMedia("(pointer: coarse)").matches;   // 매번 기기 기준으로 (저장 안 함: 다음에 열 때 키보드가 불쑥 뜨지 않게)
+  function applyKbdMode() {
+    ta.setAttribute("inputmode", kbdMode ? "text" : "none");
+    $("kp-kbd").textContent = kbdMode ? "⌨ 키보드 숨기기" : "⌨ 키보드로 입력";
+  }
+  $("kp-kbd").addEventListener("click", () => {
+    kbdMode = !kbdMode; applyKbdMode();
+    if (kbdMode) setCurLine(curLine, true); else ta.blur();
+  });
+  applyKbdMode();
 
   /* ---------------- 규격 ---------------- */
   function renderFormatSeg() {
@@ -609,6 +770,7 @@
   function renderAll() {
     const p = cur();
     ta.value = p.text;
+    curLine = Math.max(0, ta.value.split("\n").length - 1);   // 새 작품/전환 시 마지막 줄부터 이어 적기
     rebuild();
     renderProjectSelect(); renderFormatSeg(); renderInfo();
     renderGutter(); renderRows(); renderChart(); renderEditPanel();

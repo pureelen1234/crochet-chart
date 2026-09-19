@@ -37,6 +37,15 @@
       <div class="rows" id="rows"></div>
     </section>
 
+    <section class="card a-keypad" id="keypad">
+      <h2><span id="kp-cur">현재 단</span> <button class="link" id="kp-kbd" type="button">⌨ 키보드로 입력</button></h2>
+      <div class="keys keys-6" id="kp-main"></div>
+      <div class="keys keys-6" id="kp-sub"></div>
+      <div class="keys keys-num" id="kp-num"></div>
+      <div class="keys keys-6" id="kp-op"></div>
+      <div class="keys keys-6" id="kp-more" hidden></div>
+    </section>
+
     <section class="card a-format">
       <h2>도안 규격</h2>
       <div class="seg" id="format-seg" role="group" aria-label="도안 규격"></div>
@@ -61,7 +70,7 @@
           <g id="world"></g>
         </svg>
         <div class="empty" id="empty" hidden>
-          <div><b>NO PATTERN YET</b>왼쪽(위)에 도안을 입력하면 여기에 그려져요</div>
+          <div><b>NO PATTERN YET</b>키패드나 입력칸에 도안을 적으면 여기에 그려져요</div>
         </div>
         <div class="chart-tools">
           <button type="button" id="btn-fit">맞춤</button>
@@ -109,6 +118,7 @@
   <div class="sheet">
     <header><h3>도안 입력 방법</h3><button class="iconbtn" type="button" id="help-close" aria-label="닫기">✕</button></header>
     <p>한 줄이 한 단입니다. 첫 줄에 시작 방법을 적고, 그다음 줄부터 1단, 2단… 순서로 적으세요.</p>
+    <p><b>키패드</b>: 키보드 없이 기호 버튼을 눌러 적을 수 있어요. 단 칩(예: 3단 52코)을 누르면 그 단에 이어 적고, <b>↵ 다음 단</b>으로 새 단을 시작합니다. 쉼표와 띄어쓰기는 알아서 들어갑니다. 예: <code>사슬</code> <code>2</code> <code>공간에</code> <code>(</code> <code>한길긴뜨기</code> <code>3</code> … <code>)</code> <code>×</code> <code>4</code></p>
     <h4>시작 (첫 줄)</h4>
     <pre>매직링              → 원형·사각: 매직링(○)에서 시작. 1단 코 수 자유
 사슬 원형 시작 6     → 사슬 6코를 원으로 이어서 시작
