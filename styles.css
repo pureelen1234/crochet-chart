@@ -164,6 +164,7 @@ button { cursor: pointer; }
 .key:active { background: var(--accent-soft); border-color: var(--accent); }
 .key svg { width: 32px; height: 28px; display: block; color: var(--ink); }
 .key b { font-size: 22px; font-weight: 500; line-height: 1.1; }
+.key b.word { font-size: 14px; letter-spacing: -0.02em; }
 .key small { font-size: 10.5px; color: var(--ink-3); line-height: 1.1; text-align: center; word-break: keep-all; }
 .keys-num .key { min-height: 46px; }
 .keys-num .key b { font-size: 20px; }

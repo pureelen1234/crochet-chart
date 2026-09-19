@@ -313,8 +313,9 @@
     // 2열: 구조어
     sub.append(
       key("기둥사슬", KEY_SVG(SYM.drawStanding(3)), () => kpInsert("st", "기둥사슬")),
-      key("늘려뜨기", stSvg("sc", "inc", 2), () => kpInsert("mod", "늘려뜨기")),
-      key("모아뜨기", stSvg("sc", "dec", 2), () => kpInsert("mod", "모아뜨기")),
+      // 늘려·모아뜨기는 낱말 버튼 (아내 결정): "짧은뜨기 2 늘려뜨기" → "짧은뜨기 2코 늘려뜨기"로 적히고 기호는 그때 정해짐
+      key("N코 뒤에", `<b class="word">늘려뜨기</b>`, () => kpInsert("mod", "늘려뜨기")),
+      key("N코 뒤에", `<b class="word">모아뜨기</b>`, () => kpInsert("mod", "모아뜨기")),
       txtKey("공간에", "⌒", () => kpInsert("sp")),
       key("매직링", KEY_SVG(SYM.drawMagicRing()), () => kpInsert("st", "매직링")),
       txtKey("다른 기호", "…", () => { const on = more.hidden; more.hidden = !on; moreBtn.setAttribute("aria-pressed", on ? "true" : "false"); }, "more")

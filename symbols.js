@@ -107,14 +107,48 @@ const ALIAS_INDEX = (() => {
   return list;
 })();
 
-/* 늘림/줄임 부채꼴 그리기: k개의 기호를 아래(늘림) 또는 위(줄임) 한 점에서 벌립니다 */
+/* 늘림/줄임 기호 (아내 카드 사진 기준)
+   늘려뜨기: 다리 k개가 아래 한 점에서 갈라져 올라가고 머리는 모두 같은 높이. 다리마다 자기 가로선·빗금.
+   모아뜨기: 다리 k개가 위 한 점에서 만나고(A 모양) 발은 같은 높이. 가로선은 꼭대기에 하나, 빗금은 다리마다.
+   짧은뜨기는 가로선 대신 다리 끝 가까이에 짧은 교차선(작은 ×). 그 밖의 기호는 회전 복사로 대신. */
 function drawFan(def, kind, k) {
-  const spread = Math.min(26, 60 / Math.max(1, k - 1));
+  const h = def.h, id = def.id;
+  const ticks = { dc: 1, tr: 2, dtr: 3, fpdc: 1, bpdc: 1 }[id];
+  const hasBar = id === "hdc" || ticks != null;
+  if (!hasBar && id !== "sc") {                       // 그 밖의 기호: 회전 복사
+    const spread = Math.min(26, 60 / Math.max(1, k - 1));
+    let out = "";
+    for (let j = 0; j < k; j++) {
+      const a = (j - (k - 1) / 2) * spread;
+      const pivot = kind === "inc" ? def.h : -def.h;
+      out += `<g transform="translate(0 ${pivot}) rotate(${a}) translate(0 ${-pivot})">${def.draw()}</g>`;
+    }
+    return out;
+  }
+  const f = (v) => (Math.round(v * 10) / 10).toString();
+  const line = (a, b) => `<path d="M${f(a.x)} ${f(a.y)} L${f(b.x)} ${f(b.y)}"/>`;
+  const dx = Math.min(11, 26 / Math.max(1, k - 1));  // 자유 끝 사이 간격
+  const pivot = { x: 0, y: kind === "inc" ? h : -h }; // 다리가 모이는 점 (늘림: 아래, 줄임: 위)
+  const endY = -pivot.y;                             // 자유 끝 높이 (늘림: 머리, 줄임: 발)
   let out = "";
+  if (kind === "dec" && hasBar) out += line({ x: -4, y: -h }, { x: 4, y: -h });   // 모아뜨기 꼭대기 가로선
   for (let j = 0; j < k; j++) {
-    const a = (j - (k - 1) / 2) * spread;
-    const pivot = kind === "inc" ? def.h : -def.h;
-    out += `<g transform="translate(0 ${pivot}) rotate(${a}) translate(0 ${-pivot})">${def.draw()}</g>`;
+    const E = { x: (j - (k - 1) / 2) * dx, y: endY };
+    const L = Math.hypot(E.x - pivot.x, E.y - pivot.y);
+    const d = { x: (E.x - pivot.x) / L, y: (E.y - pivot.y) / L };   // 모이는 점 → 자유 끝
+    const n = { x: -d.y, y: d.x };                                   // 다리에 수직
+    out += line(pivot, E);
+    // 장식 위치는 늘림이면 머리(E)에서, 줄임이면 꼭대기(pivot)에서 다리를 따라 잰 거리
+    const at = (dist) => kind === "inc" ? { x: E.x - d.x * dist, y: E.y - d.y * dist } : { x: pivot.x + d.x * dist, y: pivot.y + d.y * dist };
+    if (id === "sc") {                                // 작은 ×: 다리를 가로지르는 짧은 선
+      const p = at(4.5);
+      out += line({ x: p.x - n.x * 4, y: p.y - n.y * 4 }, { x: p.x + n.x * 4, y: p.y + n.y * 4 });
+    }
+    if (kind === "inc" && hasBar) out += line({ x: E.x - n.x * 4, y: E.y - n.y * 4 }, { x: E.x + n.x * 4, y: E.y + n.y * 4 });   // 머리 가로선
+    for (let t = 0; t < (ticks || 0); t++) {          // 빗금: 다리를 비스듬히 가로지름
+      const p = at(7 + t * 5);
+      out += line({ x: p.x - n.x * 3 + d.x * 1.5, y: p.y - n.y * 3 + d.y * 1.5 }, { x: p.x + n.x * 3 - d.x * 1.5, y: p.y + n.y * 3 - d.y * 1.5 });
+    }
   }
   return out;
 }
