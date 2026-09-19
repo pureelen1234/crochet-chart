@@ -187,6 +187,20 @@
     return v;
   }
 
+  /* ---- 머리 기준 배치 ----
+     기호의 머리(가로선)가 단 선 위 점 P에 오도록, 기호 중심을 기둥 방향(rot 기준 아래)으로 반길이만큼 민다.
+     실제 도안처럼 한 묶음의 머리 높이가 같아지고 기둥만 한 점으로 모인다. */
+  function halfLen(el) {
+    if (el.kind === "standing") return (el.len || el.n * 6.2) / 2;
+    if (el.kind !== "st") return 0;                              // 사슬·이음은 단 선 가운데
+    const def = SYM.STITCH_BY_ID[el.stitch];
+    return def ? def.h : 0;                                      // 머리는 항상 -h에 있고 ext는 기둥 아래로만 늘어남
+  }
+  function headToCenter(P, rot, h) {
+    const a = rot * DEG;
+    return { x: P.x - h * Math.sin(a), y: P.y + h * Math.cos(a) };
+  }
+
   /* ---- 요소 하나가 만드는 앵커 ---- */
   function produce(e, vv, spread, dir) {
     const st = [], sp = [];
@@ -255,23 +269,27 @@
       const next = { st: [], sp: [] };
       els.forEach((e, i) => {
         const f = v[i];
-        const P = proj(f, R);
+        const P = proj(f, R);                           // 단 선 위의 점 = 기호의 "머리" 위치
         const radial = shape === "square" ? squareNormalRot(f, R) : -360 * f;   // 변에 수직 / 바큇살
-        let rot = radial, ext = 0;
+        let rot = radial, ext = 0, len = 0;
         const inFan = e.sg != null || (!usable && e.kind === "st");
-        if ((e.kind === "st" || e.kind === "standing") && inFan) {
-          // 같은 공간에 모여 뜨는 묶음(또는 매직링 1단): 앵커에서 바깥으로 부채꼴, 기둥을 앵커까지
-          const A = anchor[i] !== null ? proj(anchor[i], Rin) : { x: 0, y: 0 };
+        const margin = usable ? 3 : R0 + 2;             // 기둥 끝과 앵커 사이 틈 (매직링이면 링 바깥까지만)
+        // 기둥이 향하는 점(앵커): 같은 공간 묶음·매직링 1단은 그 공간, 그 밖엔 바로 안쪽(전 단 선)
+        const A = inFan && anchor[i] !== null ? proj(anchor[i], Rin) : (!usable ? { x: 0, y: 0 } : proj(f, Rin));
+        const D = Math.hypot(P.x - A.x, P.y - A.y);
+        if ((e.kind === "st" || e.kind === "standing") && (inFan || (e.kind === "standing" && !usable))) {
+          // 같은 공간에 모여 뜨는 묶음(또는 매직링 1단): 머리는 단 선에 나란히, 기둥만 앵커로 모임
           rot = Math.atan2(P.y - A.y, P.x - A.x) / DEG + 90;
-          if (e.kind === "st" && !e.mod) {
-            const def = SYM.STITCH_BY_ID[e.stitch];
-            const D = Math.hypot(P.x - A.x, P.y - A.y);
-            if (def && def.h >= 9) ext = Math.max(0, Math.min(48, D - 2 * def.h - (usable ? 3 : R0 + 2)));
-          }
         }
-        const el = { ...e, ext };
+        if (e.kind === "st" && inFan && !e.mod) {
+          const def = SYM.STITCH_BY_ID[e.stitch];
+          if (def && def.h >= 9) ext = Math.max(0, Math.min(48, D - 2 * def.h - margin));
+        }
+        if (e.kind === "standing") len = Math.max(e.n * 4, D - margin);   // 기둥사슬: 타원 N개를 기둥 길이만큼 늘여 그림
+        const el = { ...e, ext, len };
         if (shape === "square" && e.kind === "chain" && e.n >= 2 && distToCorner(f, R) < S * 1.2) el.corner = true;
-        nodes.push({ key: `${row.index}-${i}`, row: row.index, i, x: P.x, y: P.y, rot, el });
+        const C = headToCenter(P, rot, halfLen(el));   // 머리가 P에 오도록 기호 중심을 안쪽으로 밀기
+        nodes.push({ key: `${row.index}-${i}`, row: row.index, i, x: C.x, y: C.y, rot, el });
         const pr = produce(e, f, spread, 1);
         next.st.push(...pr.st); next.sp.push(...pr.sp);
       });
@@ -319,22 +337,25 @@
       const next = { st: [], sp: [] };
       els.forEach((e, i) => {
         const x = r.v[i];
-        let rot = 0, ext = 0;
+        let rot = 0, ext = 0, len = 0;
+        const ax = r.anchor[i] !== null ? r.anchor[i] : x;   // 기둥이 향하는 전 단 위치
+        const D = Math.hypot(gap, x - ax);
         if (e.kind === "st" && e.sg != null && r.anchor[i] !== null) {
-          rot = Math.atan2(-gap, x - r.anchor[i]) / DEG + 90;
+          rot = Math.atan2(-gap, x - ax) / DEG + 90;
           const def = SYM.STITCH_BY_ID[e.stitch];
-          const D = Math.hypot(gap, x - r.anchor[i]);
           if (def && def.h >= 9 && !e.mod) ext = Math.max(0, Math.min(48, D - 2 * def.h - 3));
         }
-        const yy = e.kind === "standing" ? y + 2 : y;
-        nodes.push({ key: `${row.index}-${i}`, row: row.index, i, x, y: yy, rot, el: { ...e, ext } });
+        if (e.kind === "standing") len = Math.max(e.n * 4, gap - 3);
+        const el = { ...e, ext, len };
+        const C = headToCenter({ x, y }, rot, halfLen(el));   // 머리를 단 선(y)에
+        nodes.push({ key: `${row.index}-${i}`, row: row.index, i, x: C.x, y: C.y, rot, el });
         minX = Math.min(minX, x); maxX = Math.max(maxX, x);
         const pr = produce(e, x, S, dir);
         next.st.push(...pr.st); next.sp.push(...pr.sp);
       });
       next.st.reverse(); next.sp.reverse();
       prev = next;
-      guides.push({ type: "line", x1: minX - S, x2: maxX + S, y: y + gap / 2 });
+      guides.push({ type: "line", x1: minX - S, x2: maxX + S, y });   // 단 선 = 머리 높이
       const lx = dir === -1 ? maxX + 14 : minX - 14;
       labels.push({ x: lx, y: y + 2.5, text: dir === -1 ? `${row.index}(${row.producedSt}) ←` : `→ ${row.index}(${row.producedSt})`, anchor: dir === -1 ? "start" : "end", row: row.index });
     });

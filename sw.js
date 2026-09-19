@@ -1,5 +1,5 @@
 /* 오프라인 캐시: 앱 파일은 미리 저장하고, 폰트·PDF 라이브러리는 한 번 받으면 재사용 */
-const CACHE = "crochet-chart-v5";
+const CACHE = "crochet-chart-v6";
 const SHELL = ["./", "./index.html", "./styles.css", "./app.js", "./symbols.js", "./parser.js", "./layout.js", "./manifest.webmanifest", "./icon.svg"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

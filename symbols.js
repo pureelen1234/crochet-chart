@@ -138,12 +138,14 @@ function drawChain(n, corner) {
   return out;
 }
 
-/* 기둥사슬: 동그라미 N개를 세로(바깥쪽 방향)로 쌓음 */
-function drawStanding(n) {
+/* 기둥사슬: 동그라미 N개를 세로(바깥쪽 방향)로 쌓음. len을 주면 그 길이(기둥 길이)에 맞춰 늘여 그림 */
+function drawStanding(n, len) {
+  const step = len ? len / n : 6.2;
+  const ry = Math.min(3.3, step / 2 - 0.6);
   let out = "";
   for (let k = 0; k < n; k++) {
-    const y = ((n - 1) / 2 - k) * 6.2;           // 아래(안쪽)부터 위(바깥쪽)로
-    out += `<ellipse cy="${y.toFixed(1)}" rx="2.4" ry="3.3"/>`;
+    const y = ((n - 1) / 2 - k) * step;          // 아래(안쪽)부터 위(바깥쪽)로
+    out += `<ellipse cy="${y.toFixed(1)}" rx="2.4" ry="${ry.toFixed(1)}"/>`;
   }
   return out;
 }
@@ -157,7 +159,7 @@ function drawMagicRing() { return `<circle r="6"/>`; }
 /* 하나의 코 요소(element)를 SVG 문자열로 */
 function drawElement(el) {
   if (el.kind === "chain") return drawChain(el.n, !!el.corner);
-  if (el.kind === "standing") return drawStanding(el.n);
+  if (el.kind === "standing") return drawStanding(el.n, el.len);
   if (el.kind === "join") return drawJoin();
   const def = STITCH_BY_ID[el.stitch] || STITCH_BY_ID.sc;
   if (el.mod === "inc" || el.mod === "dec") return drawFan(def, el.mod, el.n);
