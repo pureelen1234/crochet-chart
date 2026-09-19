@@ -165,6 +165,72 @@
     return { v, anchor };
   }
 
+  /* ================================================================
+     머리 펼치기 (7차): 앵커 기반으로 놓인 v를 받아, 한 단의 머리를 둘레에 고르게 다시 배분한다.
+     "묶음" = 같은 앵커에 뜨는 연속 요소(같은 공간 묶음, 또는 전 단 코 하나에 뜨는 기호 하나).
+     이웃 묶음 중심 사이 구간을 [앞 묶음 절반 + 사이 요소 + 뒤 묶음 절반] 폭으로 균등 분배하고,
+     묶음은 자기 앵커를 중심으로 대칭, 사이 요소(사슬 등)는 남는 자리에 고르게.
+     기둥이 향하는 앵커는 바꾸지 않으므로 머리만 넓게 퍼지고 기둥은 한 점으로 모인다.
+     원형(둘레 비율 0~1, 순환) 전용. opts: spread(코 간격) fanSpread(최소 묶음 간격) maxSpread(최대 간격)
+     ================================================================ */
+  function spreadHeads(els, v, anchor, opts) {
+    const m = els.length;
+    const width = (e, inGroup) => e.kind === "join" ? 0 : e.kind === "chain" ? e.n * 0.8 : e.kind === "standing" ? (inGroup ? 1 : 0.6) : (e.mod === "inc" ? e.n * 0.9 : 1);
+    // 묶음 찾기: 앵커가 같은 연속 요소. 기둥사슬은 공간 묶음 안에 있을 때(sg)만 묶음에 넣음
+    const groups = [];
+    let i = 0;
+    while (i < m) {
+      const e = els[i];
+      const grouped = anchor[i] !== null && e.kind !== "join" && (e.kind !== "standing" || e.sg != null);
+      if (!grouped) { i++; continue; }
+      let j = i + 1;
+      while (j < m && anchor[j] === anchor[i] && els[j].kind !== "join" && (els[j].kind !== "standing" || els[j].sg != null)) j++;
+      const idx = []; for (let k = i; k < j; k++) idx.push(k);
+      groups.push({ idx, c: anchor[i], w: idx.reduce((a, k) => a + width(els[k], true), 0) });
+      i = j;
+    }
+    const G = groups.length;
+    if (!G) return v;
+    const out = v.slice();
+    // 구간 k = 묶음 k 중심 → 묶음 k+1 중심 (순환). 사이 요소 = 그 사이의 묶음 아님 요소들
+    const arcs = groups.map((g, k) => {
+      const nx = groups[(k + 1) % G];
+      let L = G === 1 ? 1 : nx.c - g.c; while (L <= 0) L += 1; while (L > 1) L -= 1;
+      const free = [];
+      let p = g.idx[g.idx.length - 1] + 1;
+      const stop = G === 1 ? g.idx[0] + m : nx.idx[0] + (nx.idx[0] <= g.idx[0] ? m : 0);
+      for (; p < stop; p++) { const e = els[p % m]; if (e.kind !== "join") free.push(p % m); }
+      const wF = free.reduce((a, k) => a + width(els[k], false), 0);
+      const unit = Math.min(opts.maxSpread, L / (g.w / 2 + wF + nx.w / 2 || 1));
+      return { L, free, wF, unit };
+    });
+    // 묶음: 양옆 구간 중 좁은 쪽 간격으로 대칭 배치 (최소 fanSpread)
+    const gu = groups.map((g, k) => Math.max(opts.fanSpread, Math.min(arcs[k].unit, arcs[(k - 1 + G) % G].unit)));
+    groups.forEach((g, k) => {
+      let cum = 0;
+      g.idx.forEach(idx => { const w = width(els[idx], true); out[idx] = g.c + (cum + w / 2 - g.w / 2) * gu[k]; cum += w; });
+    });
+    // 사이 요소: 앞 묶음 끝 ~ 뒤 묶음 시작 사이를 폭대로 균등
+    arcs.forEach((a, k) => {
+      if (!a.free.length) return;
+      const g = groups[k], nx = groups[(k + 1) % G];
+      const start = g.c + (g.w / 2) * gu[k];
+      let end = (G === 1 ? g.c + 1 : nx.c) - (nx.w / 2) * gu[(k + 1) % G];
+      while (end <= start) end += 1;
+      const A = end - start, uF = A / (a.wF || 1);
+      let cum = 0;
+      a.free.forEach(idx => { const w = width(els[idx], false); out[idx] = start + (cum + w / 2) * uF; cum += w; });
+    });
+    // 이음: 기둥사슬(없으면 첫 요소) 바로 시계방향 옆
+    els.forEach((e, i) => {
+      if (e.kind !== "join") return;
+      const st = els.findIndex(x => x.kind === "standing");
+      const f = st >= 0 ? out[st] : out.find(x => x !== null);
+      out[i] = (f || 0) - opts.spread * 0.7;
+    });
+    return out;
+  }
+
   /* 사각 1단처럼 앵커가 없을 때: 모서리 사슬 4개를 대각선에 두고 변마다 고르게 */
   function assignSquareSegments(els) {
     const m = els.length;
@@ -259,7 +325,11 @@
       const hasSg = els.some(e => e.sg != null);
       if (!hasSg && shape === "square") v = assignSquareSegments(els);   // 모서리 사슬 4개면 변마다 고르게
       if (!v && !hasSg && shape !== "square") v = evenRing(els);          // 원형: 둘레에 고르게
-      if (!v) { const r = assign(els, prev, { circular: true, spread, fanSpread }); v = r.v; anchor = r.anchor; }
+      if (!v) {
+        const r = assign(els, prev, { circular: true, spread, fanSpread });
+        anchor = r.anchor;
+        v = spreadHeads(els, r.v, anchor, { spread, fanSpread, maxSpread: 2 * S / per });   // 머리를 둘레에 고르게
+      }
       else {
         // 고르게 놓았을 때 이음 위치
         const st = els.findIndex(e => e.kind === "standing");
